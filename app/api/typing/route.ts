@@ -7,12 +7,16 @@ const typingStatus: Map<string, { userName: string; timestamp: number }> = new M
 // Limpar entradas antigas a cada 10 segundos
 setInterval(() => {
   const now = Date.now()
-  for (const [key, value] of typingStatus.entries()) {
+  const keysToDelete: string[] = []
+  
+  typingStatus.forEach((value, key) => {
     // Remover entradas mais antigas que 5 segundos
     if (now - value.timestamp > 5000) {
-      typingStatus.delete(key)
+      keysToDelete.push(key)
     }
-  }
+  })
+  
+  keysToDelete.forEach(key => typingStatus.delete(key))
 }, 10000)
 
 // GET - Verificar se alguém está digitando
