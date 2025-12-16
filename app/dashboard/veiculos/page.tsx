@@ -109,65 +109,30 @@ export default function VeiculosPage() {
     }
   }
 
-  // Upload de imagem
+  // Upload de imagem diretamente para Supabase Storage
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validar tipo
-    if (!file.type.match(/^image\/(png|jpeg|jpg)$/)) {
-      setErrorMessage('Formato não suportado. Use PNG ou JPG.')
-      return
-    }
-
-    // Validar tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Arquivo muito grande. Tamanho máximo: 5MB')
-      return
-    }
-
     setUploadingImage(true)
     setErrorMessage('')
+    setSuccessMessage('')
 
     try {
-      // Criar FormData
-      const uploadFormData = new FormData()
-      uploadFormData.append('file', file)
-
-      // Fazer upload
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: uploadFormData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        
-        // Se for erro de configuração, mostrar mensagem mais amigável
-        if (error.code === 'STORAGE_NOT_CONFIGURED' || response.status === 503) {
-          setErrorMessage(
-            '⚠️ Upload de imagens não está configurado. Por favor, use o campo "Ou cole uma URL da imagem" abaixo para adicionar uma imagem via URL.'
-          )
-          // Expandir automaticamente o campo de URL
-          const detailsElement = document.querySelector('details')
-          if (detailsElement) {
-            detailsElement.open = true
-          }
-        } else {
-          throw new Error(error.error || 'Erro ao fazer upload')
-        }
-        return
-      }
-
-      const data = await response.json()
+      // Importar função de upload dinamicamente (client-side only)
+      const { uploadImageToSupabase } = await import('@/lib/upload')
+      
+      // Fazer upload diretamente para Supabase Storage
+      const imageUrl = await uploadImageToSupabase(file, 'cars')
       
       // Atualizar URL da imagem e preview
-      setFormData((prev) => ({ ...prev, imageUrl: data.url }))
-      setImagePreview(data.url)
+      setFormData((prev) => ({ ...prev, imageUrl }))
+      setImagePreview(imageUrl)
       setSuccessMessage('Imagem enviada com sucesso!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error: any) {
-      setErrorMessage(error.message || 'Erro ao fazer upload da imagem')
+      console.error('Erro ao fazer upload:', error)
+      setErrorMessage(error.message || 'Erro ao fazer upload da imagem. Verifique se o Supabase Storage está configurado corretamente.')
     } finally {
       setUploadingImage(false)
     }
