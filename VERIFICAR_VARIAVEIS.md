@@ -6,8 +6,8 @@
 
 2. **Adicione as variáveis necessárias:**
    ```env
-   DATABASE_URL=postgresql://postgres:[SENHA]@db.[PROJECT-REF].supabase.co:5432/postgres
-   NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+   DATABASE_URL=postgresql://postgres:[SENHA]@db.[PROJECT-REF].supabase.com:5432/postgres
+   NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT-REF].supabase.com
    NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
    ```
 
@@ -40,7 +40,7 @@
 1. Clique em **Add New**
 2. Adicione cada variável:
    - **Key:** `NEXT_PUBLIC_SUPABASE_URL`
-   - **Value:** `https://[PROJECT-REF].supabase.co`
+   - **Value:** `https://[PROJECT-REF].supabase.com`
    - **Environment:** Selecione **Production**, **Preview** e **Development**
    - Clique em **Save**
 

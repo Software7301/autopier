@@ -1,30 +1,14 @@
-// Cliente Supabase para Storage
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { config } from './config'
+// Cliente Supabase para Storage (backend/server-side)
+// DEPRECATED: Use lib/supabase-client.ts para novo código
+// Mantido para compatibilidade com código existente
 
-let supabaseClient: SupabaseClient | null = null
+import { supabase as supabaseClient } from './supabase-client'
 
-export function getSupabaseClient(): SupabaseClient | null {
-  // Se já foi criado, retorna o cliente existente
-  if (supabaseClient) {
-    return supabaseClient
-  }
-
-  // Usar configuração hardcoded ou variável de ambiente como fallback
-  const supabaseUrl = config.supabase.url || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = config.supabase.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // Só cria o cliente se as credenciais estiverem configuradas
-  if (supabaseUrl && supabaseAnonKey) {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
-    return supabaseClient
-  }
-
-  // Retorna null se as credenciais não estiverem configuradas
-  return null
+export function getSupabaseClient() {
+  return supabaseClient
 }
 
-// Exportar função para compatibilidade (mas não usar diretamente)
-export const supabase = getSupabaseClient()
+// Exportar cliente para compatibilidade
+export const supabase = supabaseClient
 
 

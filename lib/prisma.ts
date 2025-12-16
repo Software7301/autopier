@@ -1,16 +1,16 @@
 // Configuração do Prisma Client
 // Singleton para evitar múltiplas instâncias em desenvolvimento
+// Usa APENAS variáveis de ambiente - NUNCA URLs hardcoded
 
 import { PrismaClient } from '@prisma/client'
-import { config } from './config'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Usar configuração hardcoded ou variável de ambiente como fallback
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = config.database.url
+// Validar que DATABASE_URL está configurada
+if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ DATABASE_URL não configurada. Configure na Vercel (Settings > Environment Variables)')
 }
 
 export const prisma =

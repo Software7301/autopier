@@ -18,7 +18,7 @@ Este guia explica como configurar o banco de dados Supabase para o projeto AutoP
 4. Selecione **URI** e copie a string de conexão
 5. A URL terá o formato:
    ```
-   postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+   postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.com:5432/postgres
    ```
 
 ### 2. Configurar Storage do Supabase (para Upload de Imagens)
@@ -50,10 +50,10 @@ Adicione ou atualize as seguintes variáveis no arquivo `.env`:
 STORAGE_MODE=DATABASE
 
 # URL de conexão do Supabase (Database)
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.com:5432/postgres
 
 # Credenciais do Supabase (Storage)
-NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT-REF].supabase.com
 NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
 
 # URL pública da aplicação (para produção)

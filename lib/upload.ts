@@ -3,15 +3,24 @@
 // Este arquivo deve ser usado apenas em componentes client-side
 
 import { createClient } from '@supabase/supabase-js'
-import { config } from './config'
 
 // Criar cliente Supabase para uso no frontend
+// Usa APENAS variáveis de ambiente - NUNCA URLs hardcoded
 function getSupabaseClient() {
-  const supabaseUrl = config.supabase.url || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = config.supabase.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase não está configurado. Verifique NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    throw new Error(
+      'Supabase não está configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente da Vercel.'
+    )
+  }
+
+  // Validar que a URL termina com .supabase.com
+  if (!supabaseUrl.endsWith('.supabase.com') && !supabaseUrl.includes('.supabase.com/')) {
+    throw new Error(
+      `URL do Supabase inválida: ${supabaseUrl}. Deve terminar com .supabase.com`
+    )
   }
 
   return createClient(supabaseUrl, supabaseAnonKey)

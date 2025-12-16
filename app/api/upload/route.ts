@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '@/lib/supabase'
-import { config } from '@/lib/config'
+import { createClient } from '@supabase/supabase-js'
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic'
@@ -46,9 +45,9 @@ export async function POST(request: NextRequest) {
     const extension = originalName.split('.').pop() || 'jpg'
     const fileName = `${timestamp}_${randomStr}.${extension}`
 
-    // Obter cliente Supabase
-    const supabaseUrl = config.supabase.url || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = config.supabase.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Obter credenciais do Supabase APENAS de variáveis de ambiente
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     // Verificar se as credenciais estão configuradas
     if (!supabaseUrl || !supabaseKey) {
@@ -58,25 +57,27 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json(
         { 
-          error: 'Supabase Storage não está configurado. Verifique as credenciais.',
+          error: 'Supabase Storage não está configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.',
           code: 'STORAGE_NOT_CONFIGURED'
         },
         { status: 503 }
       )
     }
 
-    const supabase = getSupabaseClient()
-
-    if (!supabase) {
-      console.error('❌ Falha ao criar cliente Supabase')
+    // Validar que a URL termina com .supabase.com
+    if (!supabaseUrl.endsWith('.supabase.com') && !supabaseUrl.includes('.supabase.com/')) {
+      console.error('❌ URL do Supabase inválida:', supabaseUrl)
       return NextResponse.json(
         { 
-          error: 'Falha ao conectar com Supabase Storage.',
-          code: 'SUPABASE_CLIENT_ERROR'
+          error: `URL do Supabase inválida. Deve terminar com .supabase.com`,
+          code: 'INVALID_SUPABASE_URL'
         },
         { status: 500 }
       )
     }
+
+    // Criar cliente Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Verificar se o bucket existe antes de fazer upload
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets()

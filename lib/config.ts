@@ -1,39 +1,32 @@
 // Configurações do AutoPier
-// Todas as configurações estão hardcoded aqui para não depender de .env
+// Todas as configurações vêm de variáveis de ambiente
+// NUNCA usar URLs hardcoded aqui
 
 export const config = {
-  // Supabase Storage
+  // Supabase Storage - APENAS variáveis de ambiente
   supabase: {
-    url: 'https://autopiadora.supabase.co',
-    anonKey: 'sb_publishable_3vE8LPpnJfz-IwP5D9QtUQ__FlA1tNE',
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
   },
 
-  // Banco de Dados
+  // Banco de Dados - APENAS variáveis de ambiente
   database: {
-    url: 'postgresql://postgres:Maxnevida101029@db.autopiadora.supabase.co:5432/postgres',
+    url: process.env.DATABASE_URL || '',
   },
 
-  // Aplicação
+  // Aplicação - APENAS variáveis de ambiente
   app: {
-    url: 'https://autopier.vercel.app',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://autopier.vercel.app',
   },
 }
 
-// Configurar variáveis de ambiente para o Prisma (apenas se não estiverem definidas)
-if (typeof process !== 'undefined' && process.env) {
-  const env = process.env
-  const dbUrl = config.database.url
-  const supabaseUrl = config.supabase.url
-  const appUrl = config.app.url
-  
-  if (!env.DATABASE_URL) {
-    env.DATABASE_URL = dbUrl
+// Validar que as variáveis obrigatórias estão configuradas
+if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
+  if (!config.supabase.url || !config.supabase.anonKey) {
+    console.warn('⚠️ NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY devem estar configuradas na Vercel')
   }
-  if (!env.NEXT_PUBLIC_SUPABASE_URL) {
-    env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl
-  }
-  if (!env.NEXT_PUBLIC_APP_URL) {
-    env.NEXT_PUBLIC_APP_URL = appUrl
+  if (!config.database.url) {
+    console.warn('⚠️ DATABASE_URL deve estar configurada na Vercel')
   }
 }
 
