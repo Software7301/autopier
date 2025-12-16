@@ -50,7 +50,7 @@ export interface LocalOrder {
   customerPhone: string
   paymentMethod: string
   installments: number
-  selectedColor: string
+  selectedColor: string | null
   totalPrice: number
   status: string
   // Dados de entrega (opcional)
