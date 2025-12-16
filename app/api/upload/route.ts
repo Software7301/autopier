@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/supabase'
+import { config } from '@/lib/config'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
@@ -47,8 +48,9 @@ export async function POST(request: NextRequest) {
     const fileName = `${timestamp}_${originalName}`
 
     // Tentar usar Supabase Storage (produção)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // Usar configuração hardcoded ou variável de ambiente como fallback
+    const supabaseUrl = config.supabase.url || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = config.supabase.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     // Log para debug (sempre, mas com valores parcialmente ocultos em produção)
     console.log('🔍 Debug Upload:', {

@@ -3,10 +3,16 @@
 
 import { PrismaClient } from '@prisma/client'
 import * as localStorage from './storage'
+import { config } from './config'
+
+// Configurar DATABASE_URL se não estiver definida
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = config.database.url
+}
 
 // Verificar modo de armazenamento
-const STORAGE_MODE = process.env.STORAGE_MODE || 'LOCAL'
-const HAS_DATABASE = !!process.env.DATABASE_URL
+const STORAGE_MODE = process.env.STORAGE_MODE || 'DATABASE'
+const HAS_DATABASE = !!process.env.DATABASE_URL || !!config.database.url
 
 // Inicializar Prisma apenas se DATABASE_URL estiver configurado
 let prisma: PrismaClient | null = null

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseClient } from '@/lib/supabase'
+import { config } from '@/lib/config'
 
 // Rota para verificar configuração do Supabase Storage
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Usar configuração hardcoded ou variável de ambiente como fallback
+  const supabaseUrl = config.supabase.url || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = config.supabase.anonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const supabase = getSupabaseClient()
 
   const checks = {
