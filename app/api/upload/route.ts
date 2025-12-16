@@ -50,15 +50,18 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
-    // Log para debug (apenas em desenvolvimento)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Debug Upload:', {
-        hasSupabaseUrl: !!supabaseUrl,
-        hasSupabaseKey: !!supabaseKey,
-        supabaseUrlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'não configurado',
-        nodeEnv: process.env.NODE_ENV,
-      })
-    }
+    // Log para debug (sempre, mas com valores parcialmente ocultos em produção)
+    console.log('🔍 Debug Upload:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      supabaseUrlPreview: supabaseUrl 
+        ? `${supabaseUrl.substring(0, 30)}...` 
+        : '❌ NÃO CONFIGURADO',
+      supabaseKeyPreview: supabaseKey 
+        ? `${supabaseKey.substring(0, 20)}...` 
+        : '❌ NÃO CONFIGURADO',
+      nodeEnv: process.env.NODE_ENV,
+    })
 
     const supabase = getSupabaseClient()
 
