@@ -55,13 +55,28 @@
 3. Selecione **Redeploy**
 4. Ou faça um novo commit e push para o GitHub
 
-### 4. Verificar Logs
+### 4. Verificar Configuração do Upload
+
+**Nova rota de verificação automática:**
+
+Acesse `/api/upload/check` para verificar o status da configuração:
+
+- **Em desenvolvimento:** `http://localhost:3000/api/upload/check`
+- **Em produção:** `https://seu-dominio.vercel.app/api/upload/check`
+
+Esta rota mostrará:
+- ✅ Se as variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` estão configuradas
+- ✅ Se o bucket `cars` existe no Supabase Storage
+- ✅ Instruções específicas do que está faltando
+
+### 5. Verificar Logs
 
 Após o deploy, verifique os logs:
 
 1. Vá em **Deployments** → Selecione o último deploy
 2. Clique em **View Function Logs**
 3. Procure por mensagens de erro relacionadas a variáveis de ambiente
+4. Procure por logs que começam com `🔍 Debug Upload:` para ver o status das variáveis
 
 ## 🐛 Troubleshooting
 
