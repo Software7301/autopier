@@ -5,7 +5,7 @@ export const config = {
   // Supabase Storage
   supabase: {
     url: 'https://autopiadora.supabase.co',
-    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '', // Ainda precisa ser preenchido
+    anonKey: 'sb_publishable_3vE8LPpnJfz-IwP5D9QtUQ__FlA1tNE',
   },
 
   // Banco de Dados
