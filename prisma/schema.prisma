@@ -1,6 +1,3 @@
-// AutoPier - Schema do Banco de Dados
-// Prisma ORM com PostgreSQL
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,56 +7,105 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Usuário - Clientes e Donos da Concessionária
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  role      UserRole @default(CUSTOMER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  orders            Order[]
-  negotiationsAsBuyer    Negotiation[] @relation("BuyerNegotiations")
-  negotiationsAsSeller   Negotiation[] @relation("SellerNegotiations")
-  messagesSent      Message[]
+  id                   String        @id @default(cuid())
+  name                 String
+  email                String        @unique
+  phone                String?
+  role                 UserRole      @default(CUSTOMER)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  messagesSent         Message[]
+  negotiationsAsBuyer  Negotiation[] @relation("BuyerNegotiations")
+  negotiationsAsSeller Negotiation[] @relation("SellerNegotiations")
+  orders               Order[]
 
   @@map("users")
+}
+
+model Car {
+  id           String           @id @default(cuid())
+  name         String
+  brand        String
+  model        String
+  year         Int
+  price        Float
+  category     CarCategory
+  description  String?
+  imageUrl     String
+  mileage      Int?
+  color        String?
+  fuel         FuelType         @default(FLEX)
+  transmission TransmissionType @default(AUTOMATIC)
+  featured     Boolean          @default(false)
+  available    Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  negotiations Negotiation[]
+  orders       Order[]
+
+  @@map("cars")
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  userId        String?
+  carId         String
+  customerName  String
+  customerRg    String
+  customerPhone String
+  paymentMethod PaymentMethod
+  totalPrice    Float
+  installments  Int           @default(1)
+  selectedColor String?
+  status        OrderStatus   @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  car           Car           @relation(fields: [carId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+
+  @@map("orders")
+}
+
+model Negotiation {
+  id                 String            @id @default(cuid())
+  type               NegotiationType
+  carId              String?
+  buyerId            String
+  sellerId           String
+  status             NegotiationStatus @default(OPEN)
+  vehicleName        String?
+  vehicleBrand       String?
+  vehicleYear        Int?
+  vehicleMileage     Int?
+  vehicleDescription String?
+  proposedPrice      Float?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  messages           Message[]
+  buyer              User              @relation("BuyerNegotiations", fields: [buyerId], references: [id])
+  car                Car?              @relation(fields: [carId], references: [id])
+  seller             User              @relation("SellerNegotiations", fields: [sellerId], references: [id])
+
+  @@map("negotiations")
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  content       String
+  negotiationId String
+  senderId      String
+  createdAt     DateTime    @default(now())
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  sender        User        @relation(fields: [senderId], references: [id])
+
+  @@map("messages")
 }
 
 enum UserRole {
   CUSTOMER
   DEALER
   ADMIN
-}
-
-// Modelo de Veículo
-model Car {
-  id          String      @id @default(cuid())
-  name        String
-  brand       String
-  model       String
-  year        Int
-  price       Float
-  category    CarCategory
-  description String?
-  imageUrl    String
-  mileage     Int?
-  color       String?
-  fuel        FuelType    @default(FLEX)
-  transmission TransmissionType @default(AUTOMATIC)
-  featured    Boolean     @default(false)
-  available   Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  // Relacionamentos
-  orders       Order[]
-  negotiations Negotiation[]
-
-  @@map("cars")
 }
 
 enum CarCategory {
@@ -82,29 +128,6 @@ enum TransmissionType {
   AUTOMATIC
 }
 
-// Modelo de Pedido (Checkout)
-model Order {
-  id            String        @id @default(cuid())
-  userId        String?
-  carId         String
-  customerName  String
-  customerRg    String
-  customerPhone String
-  paymentMethod PaymentMethod
-  totalPrice    Float
-  installments  Int           @default(1)
-  selectedColor String?
-  status        OrderStatus   @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relacionamentos
-  user User?    @relation(fields: [userId], references: [id])
-  car  Car      @relation(fields: [carId], references: [id])
-
-  @@map("orders")
-}
-
 enum PaymentMethod {
   PIX
   DINHEIRO
@@ -122,38 +145,9 @@ enum OrderStatus {
   CANCELLED
 }
 
-// Modelo de Negociação
-model Negotiation {
-  id          String           @id @default(cuid())
-  type        NegotiationType
-  carId       String?
-  buyerId     String
-  sellerId    String
-  status      NegotiationStatus @default(OPEN)
-  
-  // Dados do veículo para venda (quando cliente quer vender para concessionária)
-  vehicleName        String?
-  vehicleBrand       String?
-  vehicleYear        Int?
-  vehicleMileage     Int?
-  vehicleDescription String?
-  proposedPrice      Float?
-  
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  // Relacionamentos
-  car      Car?      @relation(fields: [carId], references: [id])
-  buyer    User      @relation("BuyerNegotiations", fields: [buyerId], references: [id])
-  seller   User      @relation("SellerNegotiations", fields: [sellerId], references: [id])
-  messages Message[]
-
-  @@map("negotiations")
-}
-
 enum NegotiationType {
-  BUY   // Cliente quer comprar da concessionária
-  SELL  // Cliente quer vender para concessionária
+  BUY
+  SELL
 }
 
 enum NegotiationStatus {
@@ -163,19 +157,3 @@ enum NegotiationStatus {
   REJECTED
   CLOSED
 }
-
-// Modelo de Mensagem do Chat
-model Message {
-  id            String   @id @default(cuid())
-  content       String
-  negotiationId String
-  senderId      String
-  createdAt     DateTime @default(now())
-
-  // Relacionamentos
-  negotiation Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
-  sender      User        @relation(fields: [senderId], references: [id])
-
-  @@map("messages")
-}
-
