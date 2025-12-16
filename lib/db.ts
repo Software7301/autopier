@@ -225,7 +225,10 @@ export const db = {
         updatedAt: n.updatedAt.toISOString(),
       }
     }
-    return localStorage.updateNegotiation(id, data)
+    // Filtrar createdAt e updatedAt pois não devem ser atualizados manualmente
+    // e LocalNegotiation espera apenas string, não string | Date
+    const { createdAt, updatedAt, ...updateData } = data
+    return localStorage.updateNegotiation(id, updateData)
   },
 
   // ========== MESSAGES ==========
