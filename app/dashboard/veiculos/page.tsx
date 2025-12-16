@@ -131,13 +131,13 @@ export default function VeiculosPage() {
 
     try {
       // Criar FormData
-      const formData = new FormData()
-      formData.append('file', file)
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
 
       // Fazer upload
       const response = await fetch('/api/upload', {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       })
 
       if (!response.ok) {
@@ -148,7 +148,7 @@ export default function VeiculosPage() {
       const data = await response.json()
       
       // Atualizar URL da imagem e preview
-      setFormData({ ...formData, imageUrl: data.url })
+      setFormData((prev) => ({ ...prev, imageUrl: data.url }))
       setImagePreview(data.url)
       setSuccessMessage('Imagem enviada com sucesso!')
       setTimeout(() => setSuccessMessage(''), 3000)
