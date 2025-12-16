@@ -41,6 +41,7 @@ function formatPrice(price: number): string {
   }).format(price)
 }
 
+
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
@@ -177,9 +178,11 @@ export default function RelatoriosPage() {
                       outerRadius={100}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }: { name: string; percent?: number }) => 
-                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                      }
+                      label={(props) => {
+                        const name = typeof props.name === 'string' ? props.name : ''
+                        const percent = typeof props.percent === 'number' && !isNaN(props.percent) ? props.percent : 0
+                        return `${name} ${(percent * 100).toFixed(0)}%`
+                      }}
                       labelLine={false}
                     >
                       {charts.statusPedidos.filter(s => s.value > 0).map((entry, index) => (
