@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Forçar renderização dinâmica (usa searchParams)
+export const dynamic = 'force-dynamic'
+
 // GET - Listar todos os carros disponíveis (apenas disponíveis)
 export async function GET(request: NextRequest) {
   try {

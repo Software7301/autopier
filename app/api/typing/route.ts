@@ -19,6 +19,9 @@ setInterval(() => {
   keysToDelete.forEach(key => typingStatus.delete(key))
 }, 10000)
 
+// Forçar renderização dinâmica (usa searchParams)
+export const dynamic = 'force-dynamic'
+
 // GET - Verificar se alguém está digitando
 export async function GET(request: NextRequest) {
   const chatId = request.nextUrl.searchParams.get('chatId')

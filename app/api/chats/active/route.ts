@@ -11,6 +11,9 @@ import {
   markChatAsRead
 } from '@/lib/storage'
 
+// Forçar renderização dinâmica (usa searchParams)
+export const dynamic = 'force-dynamic'
+
 // GET - Buscar chats ativos
 // Query params:
 // - phone: telefone do cliente (retorna chats do cliente)

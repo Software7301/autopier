@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getOrders, getCarById, getChatSessionByReference } from '@/lib/storage'
 
+// Forçar renderização dinâmica (usa request.url)
+export const dynamic = 'force-dynamic'
+
 // GET - Buscar pedidos do cliente por telefone
 export async function GET(request: Request) {
   try {

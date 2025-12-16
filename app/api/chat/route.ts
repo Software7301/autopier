@@ -65,6 +65,9 @@ export async function POST(request: Request) {
   }
 }
 
+// Forçar renderização dinâmica (usa request.url)
+export const dynamic = 'force-dynamic'
+
 // GET - Buscar mensagens de uma negociação
 export async function GET(request: Request) {
   try {
