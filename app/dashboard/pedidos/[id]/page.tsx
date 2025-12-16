@@ -17,6 +17,8 @@ import {
   Loader2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNotifications } from '@/hooks/useNotifications'
+import { NotificationToast } from '@/components/TypingIndicator'
 
 interface Message {
   id: string
@@ -47,6 +49,10 @@ interface Pedido {
   }
   status: string
   dataPedido: string
+  entrega?: {
+    data: string | null
+    observacoes?: string
+  }
 }
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
@@ -94,8 +100,27 @@ export default function PedidoDetalhePage() {
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   
+  // Estados para notificações
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState({ title: '', message: '' })
+  const prevMessagesCountRef = useRef<number>(0)
+  
+  // Estados para animação de finalização
+  const [isCompleting, setIsCompleting] = useState(false)
+  const [isFadingOut, setIsFadingOut] = useState(false)
+
+  // Agendamento de entrega
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [deliveryDateInput, setDeliveryDateInput] = useState('')
+  const [deliveryNotes, setDeliveryNotes] = useState('')
+  const [savingSchedule, setSavingSchedule] = useState(false)
+  const [scheduleError, setScheduleError] = useState('')
+  
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  
+  // Hook de notificações
+  const { playSound, notifyNewMessage, isTabActive } = useNotifications()
 
   // Buscar dados do pedido e mensagens
   useEffect(() => {
@@ -114,7 +139,13 @@ export default function PedidoDetalhePage() {
         const chatResponse = await fetch(`/api/pedido/${pedidoId}/chat`)
         if (chatResponse.ok) {
           const chatData = await chatResponse.json()
-          setMessages(chatData.messages || [])
+          const initialMessages = chatData.messages || []
+          setMessages(initialMessages)
+          // IMPORTANTE: Inicializar o contador de mensagens
+          prevMessagesCountRef.current = initialMessages.length
+          console.log('📋 [Dashboard Pedidos] Carregamento inicial:', {
+            messagesCount: initialMessages.length,
+          })
         }
       } catch (error) {
         console.error('Erro ao buscar dados:', error)
@@ -126,24 +157,70 @@ export default function PedidoDetalhePage() {
     fetchData()
   }, [pedidoId])
 
-  // Polling para novas mensagens
+  // Polling para novas mensagens + verificar mensagens do cliente
   useEffect(() => {
+    // Não fazer polling se o pedido estiver finalizado ou se estiver completando
+    if (pedido?.status === 'COMPLETED' || isCompleting) return
+    
     const interval = setInterval(async () => {
+      if (!pedidoId) return
       try {
         const response = await fetch(`/api/pedido/${pedidoId}/chat`)
         if (response.ok) {
           const data = await response.json()
           if (data.messages && data.messages.length > messages.length) {
+            // Verificar se é uma mensagem de cliente
+            const lastNewMessage = data.messages[data.messages.length - 1]
+            
+            console.log('📩 [Dashboard Pedidos] Nova mensagem detectada:', {
+              senderName: lastNewMessage?.senderName,
+              sender: lastNewMessage?.sender,
+              prevCount: prevMessagesCountRef.current,
+              newCount: data.messages.length,
+            })
+            
+            if (lastNewMessage && lastNewMessage.sender === 'cliente') {
+              // Notificar apenas se não for a primeira carga
+              if (prevMessagesCountRef.current > 0) {
+                console.log('🔔 [Dashboard Pedidos] Disparando notificação!')
+                
+                // SEMPRE tocar som
+                playSound()
+                
+                // SEMPRE mostrar toast
+                setToastMessage({
+                  title: `${lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente'}`,
+                  message: lastNewMessage.content,
+                })
+                setShowToast(true)
+                setTimeout(() => setShowToast(false), 4000)
+                
+                // Se aba em segundo plano, também mostrar notificação do navegador
+                if (!isTabActive()) {
+                  notifyNewMessage(
+                    lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente',
+                    lastNewMessage.content,
+                    'pedido'
+                  )
+                }
+              } else {
+                console.log('⏭️ [Dashboard Pedidos] Primeira carga - não notificar')
+              }
+            } else {
+              console.log('⏭️ [Dashboard Pedidos] Mensagem própria (funcionário) - não notificar')
+            }
+            
             setMessages(data.messages)
+            prevMessagesCountRef.current = data.messages.length
           }
         }
       } catch (error) {
         // Silenciar erros de polling
       }
-    }, 3000)
+    }, 2000) // A cada 2 segundos (mais rápido que antes)
 
     return () => clearInterval(interval)
-  }, [pedidoId, messages.length])
+  }, [pedidoId, messages.length, pedido?.cliente.nome, pedido?.status, isCompleting, playSound, notifyNewMessage, isTabActive])
 
   function scrollToBottom() {
     if (messagesContainerRef.current) {
@@ -189,15 +266,91 @@ export default function PedidoDetalhePage() {
   async function handleStatusChange(newStatus: string) {
     if (!pedido) return
 
+    // Se for finalizar, iniciar processo de animação
+    if (newStatus === 'COMPLETED') {
+      setIsCompleting(true)
+      
+      try {
+        await fetch(`/api/dashboard/orders/${pedidoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        })
+        
+        // Atualizar estado local
+        setPedido({ ...pedido, status: newStatus })
+        
+        // Iniciar animação de desvanecimento após um pequeno delay
+        setTimeout(() => {
+          setIsFadingOut(true)
+        }, 500)
+        
+        // Redirecionar após 3 segundos
+        setTimeout(() => {
+          router.push('/dashboard/pedidos')
+        }, 3000)
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error)
+        setIsCompleting(false)
+      }
+    } else {
+      // Para outros status, apenas atualizar normalmente
+      try {
+        await fetch(`/api/dashboard/orders/${pedidoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        })
+        setPedido({ ...pedido, status: newStatus })
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error)
+      }
+    }
+  }
+
+  async function handleScheduleDelivery(e: React.FormEvent) {
+    e.preventDefault()
+    if (!pedido) return
+
+    setScheduleError('')
+
+    if (!deliveryDateInput) {
+      setScheduleError('Selecione data e horário da entrega.')
+      return
+    }
+
     try {
-      await fetch(`/api/dashboard/orders/${pedidoId}`, {
+      setSavingSchedule(true)
+
+      const isoDate = new Date(deliveryDateInput).toISOString()
+
+      const response = await fetch(`/api/dashboard/orders/${pedidoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          deliveryDate: isoDate,
+          deliveryNotes,
+        }),
       })
-      setPedido({ ...pedido, status: newStatus })
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar agendamento')
+      }
+
+      setPedido({
+        ...pedido,
+        entrega: {
+          data: isoDate,
+          observacoes: deliveryNotes,
+        },
+      })
+
+      setShowScheduleModal(false)
     } catch (error) {
-      console.error('Erro ao atualizar status:', error)
+      console.error(error)
+      setScheduleError('Não foi possível salvar o agendamento. Tente novamente.')
+    } finally {
+      setSavingSchedule(false)
     }
   }
 
@@ -233,7 +386,39 @@ export default function PedidoDetalhePage() {
   const currentStatus = statusLabels[pedido.status] || statusLabels.PENDING
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 1 }}
+      animate={{ opacity: isFadingOut ? 0 : 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
+      {/* Toast de Notificação */}
+      <NotificationToast
+        show={showToast}
+        title={toastMessage.title}
+        message={toastMessage.message}
+        onClose={() => setShowToast(false)}
+      />
+      
+      {/* Mensagem de Finalização */}
+      {isCompleting && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card-static p-6 bg-green-500/10 border-green-500/30"
+        >
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-6 h-6 text-green-400" />
+            <div className="flex-1">
+              <h3 className="text-white font-semibold">Pedido Finalizado!</h3>
+              <p className="text-text-secondary text-sm">
+                O pedido foi marcado como finalizado e contará como venda. Redirecionando...
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -352,38 +537,50 @@ export default function PedidoDetalhePage() {
           </div>
 
           {/* Input de Mensagem */}
-          <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
-            <div className="flex items-center gap-4">
-              <input
-                ref={inputRef}
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    if (newMessage.trim() && !sending) {
-                      handleSendMessage(e as unknown as React.FormEvent)
+          {pedido.status !== 'COMPLETED' && !isCompleting && (
+            <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
+              <div className="flex items-center gap-4">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      if (newMessage.trim() && !sending) {
+                        handleSendMessage(e as unknown as React.FormEvent)
+                      }
                     }
-                  }
-                }}
-                placeholder="Digite sua mensagem..."
-                className="flex-1 input-field !py-3.5 text-base"
-                disabled={sending}
-              />
-              <button
-                type="submit"
-                disabled={!newMessage.trim() || sending}
-                className="btn-primary !p-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {sending ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
+                  }}
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 input-field !py-3.5 text-base"
+                  disabled={sending || isCompleting}
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim() || sending || isCompleting}
+                  className="btn-primary !p-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+          
+          {/* Mensagem de Chat Fechado */}
+          {(pedido.status === 'COMPLETED' || isCompleting) && (
+            <div className="p-5 border-t border-surface-border bg-surface-dark/50">
+              <div className="flex items-center justify-center gap-3 text-text-muted">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <p className="text-sm">Chat encerrado - Pedido finalizado</p>
+              </div>
             </div>
-          </form>
+          )}
         </div>
 
         {/* Coluna Lateral - Detalhes */}
@@ -462,6 +659,21 @@ export default function PedidoDetalhePage() {
                   {formatPrice(pedido.pagamento.valorTotal)}
                 </p>
               </div>
+
+              {/* Entrega agendada */}
+              {pedido.entrega?.data && (
+                <div className="pt-3 border-t border-surface-border space-y-1">
+                  <p className="text-text-muted text-sm">Entrega Agendada</p>
+                  <p className="text-white font-medium">
+                    {formatDate(pedido.entrega.data)}
+                  </p>
+                  {pedido.entrega.observacoes && (
+                    <p className="text-text-secondary text-xs">
+                      Observações: {pedido.entrega.observacoes}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -474,13 +686,111 @@ export default function PedidoDetalhePage() {
               <CheckCircle className="w-5 h-5" />
               Marcar como Finalizado
             </button>
-            <button className="btn-secondary w-full flex items-center justify-center gap-2">
+            <button 
+              type="button"
+              onClick={() => {
+                setScheduleError('')
+                setDeliveryDateInput(
+                  pedido.entrega?.data
+                    ? new Date(pedido.entrega.data).toISOString().slice(0, 16)
+                    : ''
+                )
+                setDeliveryNotes(pedido.entrega?.observacoes || '')
+                setShowScheduleModal(true)
+              }}
+              className="btn-secondary w-full flex items-center justify-center gap-2"
+            >
               <Calendar className="w-5 h-5" />
               Agendar Entrega
             </button>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de Agendamento de Entrega */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="card-static w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Agendar Entrega
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowScheduleModal(false)}
+                className="text-text-muted hover:text-white transition-colors text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <p className="text-text-secondary text-sm">
+              Defina a data e horário da entrega deste veículo para o cliente.
+            </p>
+
+            <form onSubmit={handleScheduleDelivery} className="space-y-4 mt-2">
+              <div className="space-y-2">
+                <label className="text-sm text-text-muted">
+                  Data e horário da entrega
+                </label>
+                <input
+                  type="datetime-local"
+                  value={deliveryDateInput}
+                  onChange={(e) => setDeliveryDateInput(e.target.value)}
+                  className="input-field w-full"
+                  min={new Date().toISOString().slice(0, 16)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-text-muted">
+                  Observações (opcional)
+                </label>
+                <textarea
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value)}
+                  className="input-field w-full min-h-[80px] resize-none"
+                  placeholder="Ex: Entregar na casa do cliente, confirmar documentos, etc."
+                />
+              </div>
+
+              {scheduleError && (
+                <p className="text-red-400 text-sm">{scheduleError}</p>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="btn-secondary px-4"
+                  disabled={savingSchedule}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary px-4 flex items-center gap-2"
+                  disabled={savingSchedule}
+                >
+                  {savingSchedule ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Salvar Agendamento
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </motion.div>
   )
 }

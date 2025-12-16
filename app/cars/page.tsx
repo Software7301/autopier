@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, SlidersHorizontal, Car } from 'lucide-react'
+import { Search, SlidersHorizontal, Car, RefreshCw } from 'lucide-react'
 import CarCard from '@/components/CarCard'
 import FilterPills from '@/components/FilterPills'
 import { CarCardSkeleton } from '@/components/Loading'
@@ -22,9 +22,13 @@ interface Car {
   featured: boolean
 }
 
-// Apenas categoria "Todos" - mostra todos os 23 veículos
+// Categorias disponíveis
 const categoryFilters = [
   { value: 'TODOS', label: 'Todos' },
+  { value: 'SUV', label: 'SUV' },
+  { value: 'SEDAN', label: 'Sedan' },
+  { value: 'COMPACTO', label: 'Compacto' },
+  { value: 'ESPORTIVO', label: 'Esportivo' },
 ]
 
 export default function CarsPage() {
@@ -34,20 +38,24 @@ export default function CarsPage() {
   const [selectedCategory, setSelectedCategory] = useState('TODOS')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Buscar carros da API
-  useEffect(() => {
-    async function fetchCars() {
-      try {
-        const response = await fetch('/api/cars')
-        const data = await response.json()
-        setCars(data)
-        setFilteredCars(data)
-      } catch (error) {
-        console.error('Erro ao buscar carros:', error)
-      } finally {
-        setLoading(false)
-      }
+  // Função para buscar carros
+  async function fetchCars() {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/cars', { cache: 'no-store' })
+      const data = await response.json()
+      console.log('Carros carregados:', data.length, data)
+      setCars(data)
+      setFilteredCars(data)
+    } catch (error) {
+      console.error('Erro ao buscar carros:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  // Buscar carros da API ao carregar
+  useEffect(() => {
     fetchCars()
   }, [])
 
@@ -120,6 +128,15 @@ export default function CarsPage() {
           <p className="text-text-secondary">
             <span className="text-white font-semibold">{filteredCars.length}</span> veículo(s) encontrado(s)
           </p>
+          <button
+            onClick={fetchCars}
+            disabled={loading}
+            className="btn-secondary flex items-center gap-2"
+            title="Atualizar catálogo"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
         </div>
 
         {/* Grid de Carros */}
@@ -145,20 +162,25 @@ export default function CarsPage() {
           <div className="text-center py-16 card-static">
             <Car className="w-16 h-16 text-text-muted mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">
-              Nenhum veículo encontrado
+              Nenhum veículo disponível nesta categoria.
             </h3>
             <p className="text-text-secondary mb-6">
-              Tente ajustar os filtros ou a busca.
+              {selectedCategory === 'TODOS' 
+                ? 'O catálogo está vazio. Veículos serão adicionados em breve.'
+                : `Não há veículos na categoria ${categoryFilters.find(c => c.value === selectedCategory)?.label || selectedCategory}.`
+              }
             </p>
-            <button
-              onClick={() => {
-                setSelectedCategory('TODOS')
-                setSearchTerm('')
-              }}
-              className="btn-secondary"
-            >
-              Limpar Filtros
-            </button>
+            {selectedCategory !== 'TODOS' && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('TODOS')
+                  setSearchTerm('')
+                }}
+                className="btn-secondary"
+              >
+                Ver Todas as Categorias
+              </button>
+            )}
           </div>
         )}
       </div>

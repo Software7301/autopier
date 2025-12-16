@@ -20,6 +20,7 @@ import {
 // Links do menu
 const menuItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
+  { href: '/dashboard/veiculos', label: 'Veículos', icon: Car },
   { href: '/dashboard/pedidos', label: 'Pedidos', icon: ShoppingCart },
   { href: '/dashboard/negociacoes', label: 'Negociações', icon: MessageSquare },
   { href: '/dashboard/relatorios', label: 'Relatórios', icon: BarChart3 },
@@ -60,12 +61,14 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="p-6 border-b border-surface-border">
             <Link href="/dashboard" className="flex items-center gap-3 group">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-md shadow-primary/20 group-hover:border-primary/50 transition-all duration-300">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-md shadow-primary/20 group-hover:border-primary/50 transition-all duration-300 flex-shrink-0">
                 <Image
                   src="/images.png"
                   alt="AutoPier"
-                  fill
-                  className="object-cover"
+                  width={40}
+                  height={40}
+                  className="object-cover w-full h-full"
+                  priority
                 />
               </div>
               <div>
@@ -134,12 +137,14 @@ export default function DashboardLayout({
               <Menu className="w-6 h-6 text-white" />
             </button>
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-primary/30">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-primary/30 flex-shrink-0">
                 <Image
                   src="/images.png"
                   alt="AutoPier"
-                  fill
-                  className="object-cover"
+                  width={32}
+                  height={32}
+                  className="object-cover w-full h-full"
+                  priority
                 />
               </div>
               <span className="text-lg font-display font-bold text-white">

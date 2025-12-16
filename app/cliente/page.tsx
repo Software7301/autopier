@@ -299,13 +299,6 @@ export default function ClientePage() {
                               <span className="text-text-muted text-xs">
                                 {formatDate(neg.updatedAt)}
                               </span>
-                              <Link
-                                href={`/negociacao/${neg.id}`}
-                                className="btn-primary !px-4 !py-2 text-sm flex items-center gap-2"
-                              >
-                                Acessar Chat
-                                <ArrowRight className="w-4 h-4" />
-                              </Link>
                             </div>
                           </div>
                         </div>
@@ -386,13 +379,6 @@ export default function ClientePage() {
                               <span className="text-text-muted text-xs">
                                 {formatDate(order.updatedAt)}
                               </span>
-                              <Link
-                                href={`/pedido/${order.id}/chat`}
-                                className="btn-accent !px-4 !py-2 text-sm flex items-center gap-2"
-                              >
-                                Acessar Chat
-                                <ArrowRight className="w-4 h-4" />
-                              </Link>
                             </div>
                           </div>
                         </div>

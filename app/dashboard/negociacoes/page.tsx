@@ -295,20 +295,12 @@ export default function NegociacoesPage() {
                     </div>
                   </div>
 
-                  {/* Status e Ação */}
+                  {/* Status */}
                   <div className="flex flex-row lg:flex-col items-center lg:items-end gap-4">
                     <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${status.bg} ${status.color}`}>
                       <StatusIcon className="w-4 h-4" />
                       {status.label}
                     </span>
-
-                    <Link
-                      href={`/dashboard/negociacoes/${neg.id}`}
-                      className="btn-primary !py-2 !px-4 flex items-center gap-2"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Abrir Chat
-                    </Link>
                   </div>
                 </div>
               </motion.div>

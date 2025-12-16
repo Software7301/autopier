@@ -53,6 +53,9 @@ export interface LocalOrder {
   selectedColor: string
   totalPrice: number
   status: string
+  // Dados de entrega (opcional)
+  deliveryDate?: string
+  deliveryNotes?: string
   createdAt: string
   updatedAt: string
 }

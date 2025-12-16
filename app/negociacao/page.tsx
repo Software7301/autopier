@@ -131,8 +131,8 @@ export default function NegociacaoPage() {
             </button>
 
             {/* Comprar Veículo */}
-            <button
-              onClick={() => setNegotiationType('BUY')}
+            <Link
+              href="/cars"
               className="card p-8 text-left group"
             >
               <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-primary/30 transition-colors">
@@ -145,10 +145,10 @@ export default function NegociacaoPage() {
                 Interessado em algum veículo? Negocie diretamente conosco.
               </p>
               <span className="inline-flex items-center gap-2 text-primary font-medium">
-                Iniciar Compra
+                Ver Catálogo
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </span>
-            </button>
+            </Link>
           </div>
         )}
 

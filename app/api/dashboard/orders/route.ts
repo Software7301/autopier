@@ -18,8 +18,11 @@ export async function GET(request: Request) {
 
     let orders = getOrders()
 
-    // Filtrar por status
-    if (status && status !== 'TODOS') {
+    // Por padrão, excluir pedidos finalizados da lista (mas ainda permitir filtrar por eles)
+    if (!status || status === 'TODOS') {
+      orders = orders.filter(o => o.status !== 'COMPLETED')
+    } else if (status && status !== 'TODOS') {
+      // Se filtro específico, aplicar normalmente
       orders = orders.filter(o => o.status === status)
     }
 

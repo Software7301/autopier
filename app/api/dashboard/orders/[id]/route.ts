@@ -44,12 +44,17 @@ export async function GET(
         metodo: formatPaymentMethod(order.paymentMethod),
         parcelas: order.installments || 1,
         valorTotal: order.totalPrice,
-        valorParcela: order.installments > 1 
-          ? order.totalPrice / order.installments 
-          : order.totalPrice,
+        valorParcela:
+          order.installments > 1
+            ? order.totalPrice / order.installments
+            : order.totalPrice,
       },
       status: order.status,
       dataPedido: order.createdAt,
+      entrega: {
+        data: order.deliveryDate || null,
+        observacoes: order.deliveryNotes || '',
+      },
     }
 
     return NextResponse.json(formattedOrder)
@@ -70,14 +75,26 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { status } = body
 
-    const order = updateOrder(id, { status })
+    const { status, deliveryDate, deliveryNotes } = body
+
+    const updateData: any = {}
+    if (typeof status === 'string') {
+      updateData.status = status
+    }
+    if (typeof deliveryDate === 'string') {
+      updateData.deliveryDate = deliveryDate
+    }
+    if (typeof deliveryNotes === 'string') {
+      updateData.deliveryNotes = deliveryNotes
+    }
+
+    const order = updateOrder(id, updateData)
 
     if (!order) {
       return NextResponse.json(
         { error: 'Pedido não encontrado' },
-        { status: 404 }
+        { status: 404 },
       )
     }
 

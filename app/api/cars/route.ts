@@ -1,337 +1,124 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-// Catálogo COMPLETO de veículos (23 veículos)
-// featured = true apenas para os 3 em destaque
-const mockCars = [
-  // ===== SUVs (6 veículos) =====
-  {
-    id: 'suv-1',
-    name: 'Volkswagen T-Cross',
-    brand: 'Volkswagen',
-    model: 'T-Cross',
-    year: 2024,
-    price: 139900,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'suv-2',
-    name: 'Hyundai Creta',
-    brand: 'Hyundai',
-    model: 'Creta',
-    year: 2024,
-    price: 149900,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1619682817481-e994891cd1f5?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'suv-3',
-    name: 'Honda HR-V',
-    brand: 'Honda',
-    model: 'HR-V',
-    year: 2024,
-    price: 159900,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'suv-4',
-    name: 'Chevrolet Tracker',
-    brand: 'Chevrolet',
-    model: 'Tracker',
-    year: 2024,
-    price: 134900,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'suv-5',
-    name: 'Jeep Compass',
-    brand: 'Jeep',
-    model: 'Compass',
-    year: 2024,
-    price: 189900,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=800',
-    mileage: 0,
-    fuel: 'DIESEL',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'suv-6',
-    name: 'Porsche Cayenne',
-    brand: 'Porsche',
-    model: 'Cayenne',
-    year: 2023,
-    price: 689000,
-    category: 'SUV',
-    imageUrl: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800',
-    mileage: 8000,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  // ===== ESPORTIVOS (7 veículos) - 3 com destaque =====
-  {
-    id: 'esp-1',
-    name: 'BMW X5 M Sport',
-    brand: 'BMW',
-    model: 'X5',
-    year: 2024,
-    price: 589000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800',
-    mileage: 0,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: true, // ⭐ DESTAQUE
-  },
-  {
-    id: 'esp-2',
-    name: 'Mercedes-Benz C300',
-    brand: 'Mercedes-Benz',
-    model: 'C300',
-    year: 2023,
-    price: 389000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800',
-    mileage: 12000,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: true, // ⭐ DESTAQUE
-  },
-  {
-    id: 'esp-3',
-    name: 'BMW M5 Competition',
-    brand: 'BMW',
-    model: 'M5',
-    year: 2024,
-    price: 899000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800',
-    mileage: 0,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: true, // ⭐ DESTAQUE
-  },
-  {
-    id: 'esp-4',
-    name: 'Porsche 911 Carrera',
-    brand: 'Porsche',
-    model: '911',
-    year: 2023,
-    price: 890000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800',
-    mileage: 5000,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'esp-5',
-    name: 'Mercedes-AMG GT',
-    brand: 'Mercedes-Benz',
-    model: 'AMG GT',
-    year: 2023,
-    price: 950000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800',
-    mileage: 3000,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'esp-6',
-    name: 'BMW M4 Competition',
-    brand: 'BMW',
-    model: 'M4',
-    year: 2024,
-    price: 699000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=800',
-    mileage: 0,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'esp-7',
-    name: 'Chevrolet Camaro SS',
-    brand: 'Chevrolet',
-    model: 'Camaro',
-    year: 2023,
-    price: 399000,
-    category: 'ESPORTIVO',
-    imageUrl: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800',
-    mileage: 2000,
-    fuel: 'GASOLINA',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  // ===== SEDÃS (5 veículos) =====
-  {
-    id: 'sed-1',
-    name: 'Chevrolet Onix Plus',
-    brand: 'Chevrolet',
-    model: 'Onix Plus',
-    year: 2024,
-    price: 89900,
-    category: 'SEDAN',
-    imageUrl: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'sed-2',
-    name: 'Hyundai HB20S',
-    brand: 'Hyundai',
-    model: 'HB20S',
-    year: 2024,
-    price: 94900,
-    category: 'SEDAN',
-    imageUrl: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'sed-3',
-    name: 'Volkswagen Virtus',
-    brand: 'Volkswagen',
-    model: 'Virtus',
-    year: 2024,
-    price: 109900,
-    category: 'SEDAN',
-    imageUrl: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'sed-4',
-    name: 'Fiat Cronos',
-    brand: 'Fiat',
-    model: 'Cronos',
-    year: 2024,
-    price: 84900,
-    category: 'SEDAN',
-    imageUrl: 'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'MANUAL',
-    featured: false,
-  },
-  {
-    id: 'sed-5',
-    name: 'Honda City',
-    brand: 'Honda',
-    model: 'City',
-    year: 2024,
-    price: 119900,
-    category: 'SEDAN',
-    imageUrl: 'https://images.unsplash.com/photo-1619682817481-e994891cd1f5?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  // ===== COMPACTOS (5 veículos) =====
-  {
-    id: 'com-1',
-    name: 'Chevrolet Onix',
-    brand: 'Chevrolet',
-    model: 'Onix',
-    year: 2024,
-    price: 79900,
-    category: 'COMPACTO',
-    imageUrl: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'com-2',
-    name: 'Volkswagen Polo',
-    brand: 'Volkswagen',
-    model: 'Polo',
-    year: 2024,
-    price: 89900,
-    category: 'COMPACTO',
-    imageUrl: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'com-3',
-    name: 'Hyundai HB20',
-    brand: 'Hyundai',
-    model: 'HB20',
-    year: 2024,
-    price: 84900,
-    category: 'COMPACTO',
-    imageUrl: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'AUTOMATIC',
-    featured: false,
-  },
-  {
-    id: 'com-4',
-    name: 'Fiat Argo',
-    brand: 'Fiat',
-    model: 'Argo',
-    year: 2024,
-    price: 74900,
-    category: 'COMPACTO',
-    imageUrl: 'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'MANUAL',
-    featured: false,
-  },
-  {
-    id: 'com-5',
-    name: 'Renault Kwid',
-    brand: 'Renault',
-    model: 'Kwid',
-    year: 2024,
-    price: 64900,
-    category: 'COMPACTO',
-    imageUrl: 'https://images.unsplash.com/photo-1619682817481-e994891cd1f5?w=800',
-    mileage: 0,
-    fuel: 'FLEX',
-    transmission: 'MANUAL',
-    featured: false,
-  },
-]
+// GET - Listar todos os carros disponíveis (apenas disponíveis)
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const category = searchParams.get('category')
+    const available = searchParams.get('available') !== 'false' // Por padrão, só mostra disponíveis
 
-// GET - Listar todos os carros disponíveis
-export async function GET() {
-  return NextResponse.json(mockCars)
+    const where: any = {}
+    
+    if (category && category !== 'TODOS') {
+      where.category = category
+    }
+    
+    if (available) {
+      where.available = true
+    }
+
+    const cars = await prisma.car.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return NextResponse.json(cars)
+  } catch (error: any) {
+    console.error('Erro ao buscar carros:', error)
+    
+    // Se for erro de conexão com banco, retornar array vazio para não quebrar o frontend
+    if (error.code === 'P1001' || error.message?.includes('DATABASE_URL') || error.message?.includes('Environment variable')) {
+      console.warn('Banco de dados não configurado. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+    
+    return NextResponse.json(
+      { error: 'Erro ao buscar carros' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST - Criar novo veículo
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const {
+      name,
+      brand,
+      model,
+      year,
+      price,
+      category,
+      imageUrl,
+      mileage,
+      description,
+      color,
+      fuel,
+      transmission,
+      available,
+    } = body
+
+    // Validações obrigatórias
+    if (!name || !brand || !model || !year || !price || !category || !imageUrl) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios: name, brand, model, year, price, category, imageUrl' },
+        { status: 400 }
+      )
+    }
+
+    // Validar categoria
+    const validCategories = ['SUV', 'SEDAN', 'COMPACTO', 'ESPORTIVO']
+    if (!validCategories.includes(category)) {
+      return NextResponse.json(
+        { error: 'Categoria inválida. Use: SUV, SEDAN, COMPACTO ou ESPORTIVO' },
+        { status: 400 }
+      )
+    }
+
+    const carData = {
+      name,
+      brand,
+      model,
+      year: parseInt(year),
+      price: parseFloat(price),
+      category,
+      imageUrl,
+      mileage: mileage ? parseInt(mileage) : null,
+      description: description || null,
+      color: color || null,
+      fuel: fuel || 'FLEX',
+      transmission: transmission || 'AUTOMATIC',
+      available: available !== false, // Por padrão, disponível
+      featured: false,
+    }
+
+    console.log('Criando veículo com dados:', carData)
+
+    const car = await prisma.car.create({
+      data: carData,
+    })
+
+    console.log('Veículo criado com sucesso:', car.id, car.name, 'Available:', car.available)
+
+    return NextResponse.json(car, { status: 201 })
+  } catch (error: any) {
+    console.error('Erro ao criar veículo:', error)
+    
+    // Se for erro de conexão com banco
+    if (error.code === 'P1001' || error.message?.includes('DATABASE_URL') || error.message?.includes('Environment variable')) {
+      return NextResponse.json(
+        { error: 'Banco de dados não configurado. Configure a variável DATABASE_URL no arquivo .env' },
+        { status: 500 }
+      )
+    }
+    
+    return NextResponse.json(
+      { error: error.message || 'Erro ao criar veículo' },
+      { status: 500 }
+    )
+  }
 }

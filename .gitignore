@@ -48,3 +48,6 @@ prisma/*.db-journal
 # Local storage (development)
 .data/
 
+# Uploads
+public/uploads/
+

@@ -9,32 +9,12 @@ import {
   Award, 
   TrendingUp, 
   ArrowRight,
-  Zap,
   Users,
+  Star,
   CheckCircle,
-  Star
+  Zap,
 } from 'lucide-react'
 import { motion, useInView } from 'framer-motion'
-import CarCard from '@/components/CarCard'
-
-interface Car {
-  id: string
-  name: string
-  brand: string
-  model: string
-  year: number
-  price: number
-  category: string
-  imageUrl: string
-  mileage: number
-  fuel: string
-  transmission: string
-  featured?: boolean
-}
-
-interface HomeContentProps {
-  featuredCars: Car[]
-}
 
 // Variantes de animação
 const fadeInUp = {
@@ -93,12 +73,51 @@ function AnimatedSection({
   )
 }
 
-export default function HomeContent({ featuredCars }: HomeContentProps) {
+export default function HomeContent() {
   const benefitsRef = useRef(null)
   const benefitsInView = useInView(benefitsRef, { once: true, margin: "-100px" })
   
-  const carsRef = useRef(null)
-  const carsInView = useInView(carsRef, { once: true, margin: "-100px" })
+  const simulationsRef = useRef(null)
+  const simulationsInView = useInView(simulationsRef, { once: true, margin: "-100px" })
+  
+  // Simulações de conversas (estilo WhatsApp)
+  const conversationSimulations = [
+    {
+      id: 'sim-1',
+      messages: [
+        { sender: 'cliente', text: 'Esse Civic 2021 ainda está disponível?', time: '14:23' },
+        { sender: 'consultor', text: 'Sim! Está revisado e com garantia. Posso te passar as condições?', time: '14:24' },
+        { sender: 'cliente', text: 'Consegue melhorar o valor à vista?', time: '14:25' },
+        { sender: 'consultor', text: 'Consigo sim, posso fazer R$ 92.900.', time: '14:26' },
+      ],
+    },
+    {
+      id: 'sim-2',
+      messages: [
+        { sender: 'cliente', text: 'Aceita meu Corolla como parte do pagamento?', time: '15:10' },
+        { sender: 'consultor', text: 'Aceitamos sim, fazemos a avaliação na hora.', time: '15:11' },
+        { sender: 'cliente', text: 'Ótimo, podemos negociar hoje?', time: '15:12' },
+        { sender: 'consultor', text: 'Claro! Já vou separar o veículo.', time: '15:13' },
+      ],
+    },
+    {
+      id: 'sim-3',
+      messages: [
+        { sender: 'cliente', text: 'Qual o prazo de entrega?', time: '16:45' },
+        { sender: 'consultor', text: 'Entrega imediata após fechamento.', time: '16:46' },
+        { sender: 'cliente', text: 'Perfeito, vamos fechar.', time: '16:47' },
+      ],
+    },
+    {
+      id: 'sim-4',
+      messages: [
+        { sender: 'cliente', text: 'Esse HR-V tem garantia?', time: '10:30' },
+        { sender: 'consultor', text: 'Sim, 6 meses de garantia total. Todos os documentos em dia.', time: '10:31' },
+        { sender: 'cliente', text: 'Pode me enviar mais fotos?', time: '10:32' },
+        { sender: 'consultor', text: 'Claro! Vou enviar agora mesmo pelo chat.', time: '10:33' },
+      ],
+    },
+  ]
 
   const diferenciais = [
     {
@@ -325,71 +344,124 @@ export default function HomeContent({ featuredCars }: HomeContentProps) {
         </div>
       </section>
 
-      {/* ===== CARROS EM DESTAQUE ===== */}
+      {/* ===== SIMULAÇÕES DE NEGOCIAÇÃO ===== */}
       <section className="py-24 relative">
         {/* Background decorativo */}
         <div className="absolute inset-0 bg-gradient-to-b from-background-secondary via-background to-background" />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-4">
-            <div>
-              <motion.span 
-                className="inline-block text-accent text-sm font-semibold tracking-wider uppercase mb-3"
+          <AnimatedSection className="text-center mb-12">
+            <motion.span 
+              className="inline-block text-accent text-sm font-semibold tracking-wider uppercase mb-3"
+            >
+              💬 Simulações de Negociação
+            </motion.span>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-3">
+              Veja como funciona a <span className="text-gradient">Negociação</span>
+            </h2>
+            <p className="text-text-secondary text-lg max-w-2xl mx-auto">
+              Veja exemplos reais de como clientes negociam veículos diretamente com nossa equipe.
+            </p>
+          </AnimatedSection>
+
+          <motion.div 
+            ref={simulationsRef}
+            initial="hidden"
+            animate={simulationsInView ? "visible" : "hidden"}
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
+          >
+            {conversationSimulations.map((conversation, index) => (
+              <motion.div
+                key={conversation.id}
+                variants={fadeInUp}
+                whileHover={{ y: -4, scale: 1.01 }}
+                transition={{ duration: 0.3 }}
+                className="card-static overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10"
               >
-                Seleção Especial
-              </motion.span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-3">
-                Veículos em <span className="text-gradient">Destaque</span>
-              </h2>
-              <p className="text-text-secondary text-lg">
-                Os melhores veículos selecionados para você.
-              </p>
-            </div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                {/* Header do chat */}
+                <div className="bg-surface-dark/80 p-4 border-b border-surface-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                      <MessageCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-white font-semibold text-sm">Consultor AutoPier</p>
+                      <p className="text-text-muted text-xs">Simulação de conversa</p>
+                    </div>
+                    <div className="px-2 py-1 bg-primary/20 text-primary text-[10px] font-semibold rounded-full border border-primary/30">
+                      EXEMPLO
+                    </div>
+                  </div>
+                </div>
+
+                {/* Área de mensagens estilo WhatsApp */}
+                <div className="p-4 space-y-3 bg-surface-dark/40 min-h-[280px]">
+                  {conversation.messages.map((message, msgIndex) => {
+                    const isCliente = message.sender === 'cliente'
+                    return (
+                      <motion.div
+                        key={msgIndex}
+                        initial={{ opacity: 0, x: isCliente ? -20 : 20, y: 10 }}
+                        animate={{ opacity: 1, x: 0, y: 0 }}
+                        transition={{ 
+                          delay: index * 0.2 + msgIndex * 0.15,
+                          duration: 0.4,
+                          ease: "easeOut"
+                        }}
+                        className={`flex items-end gap-2 ${isCliente ? 'justify-start' : 'justify-end'}`}
+                      >
+                        {isCliente && (
+                          <div className="w-8 h-8 rounded-full bg-accent/30 flex items-center justify-center text-accent text-xs font-bold flex-shrink-0">
+                            C
+                          </div>
+                        )}
+                        <div className={`max-w-[75%] ${isCliente ? '' : 'flex flex-col items-end'}`}>
+                          <div
+                            className={`rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                              isCliente
+                                ? 'rounded-bl-sm bg-surface text-white'
+                                : 'rounded-br-sm bg-primary text-white'
+                            }`}
+                          >
+                            <p className="leading-relaxed whitespace-pre-wrap break-words">
+                              {message.text}
+                            </p>
+                          </div>
+                          <p className={`text-[10px] mt-1 ${isCliente ? 'text-text-muted' : 'text-white/70'}`}>
+                            {message.time}
+                          </p>
+                        </div>
+                        {!isCliente && (
+                          <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
+                            A
+                          </div>
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Call to Action */}
+          <AnimatedSection className="text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={simulationsInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.6 }}
+            >
               <Link
-                href="/cars"
-                className="btn-secondary flex items-center gap-2 group"
+                href="/negociacao"
+                className="btn-primary inline-flex items-center gap-2 text-lg px-8 py-4 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
               >
-                Ver Todos
+                <MessageCircle className="w-5 h-5" />
+                Iniciar minha negociação
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
           </AnimatedSection>
-
-          {featuredCars.length > 0 ? (
-            <motion.div 
-              ref={carsRef}
-              initial="hidden"
-              animate={carsInView ? "visible" : "hidden"}
-              variants={staggerContainer}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
-              {featuredCars.map((car, index) => (
-                <motion.div
-                  key={car.id}
-                  variants={fadeInUp}
-                  whileHover={{ y: -8 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <CarCard car={car} />
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : (
-            <AnimatedSection className="text-center py-16 card-static">
-              <Car className="w-16 h-16 text-text-muted mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Nenhum veículo em destaque
-              </h3>
-              <p className="text-text-secondary mb-6">
-                Configure o banco de dados e execute o seed para ver os veículos.
-              </p>
-              <Link href="/cars" className="btn-primary inline-flex items-center gap-2">
-                Ver Catálogo
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </AnimatedSection>
-          )}
         </div>
       </section>
 

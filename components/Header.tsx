@@ -3,11 +3,20 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Car, Menu, X, MessageCircle, Home, LayoutDashboard, User } from 'lucide-react'
 import { ActiveChatIndicator } from './ActiveChatBanner'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const pathname = usePathname()
+  
+  // Dashboard usa outro layout próprio -> não mostrar header público lá
+  const isDashboard = pathname?.startsWith('/dashboard')
+
+  if (isDashboard) {
+    return null
+  }
 
   const navLinks = [
     { href: '/', label: 'Início', icon: Home },
@@ -53,8 +62,8 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            {/* Indicador de Chat Ativo */}
-            <ActiveChatIndicator />
+            {/* Indicador de Chat Ativo - Não mostrar no dashboard */}
+            {!isDashboard && <ActiveChatIndicator />}
             <Link
               href="/cliente"
               prefetch={true}

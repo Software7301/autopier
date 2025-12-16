@@ -6,8 +6,11 @@ export async function GET() {
     const orders = getOrders()
     const negotiations = getNegotiations()
 
-    // Data atual
-    const now = new Date()
+    // Data atual considerando fuso horário de São Paulo (Brasil)
+    // Isso garante que a virada de mês/semana siga o horário local da concessionária
+    const now = new Date(
+      new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    )
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfWeek = new Date(now)
     startOfWeek.setDate(now.getDate() - now.getDay())
@@ -21,11 +24,14 @@ export async function GET() {
       new Date(o.createdAt) >= startOfWeek && o.status === 'COMPLETED'
     )
 
-    // Contar pedidos por status
+    // Contar pedidos por status (apenas do mês atual)
     const pendingOrders = orders.filter(o => 
-      o.status === 'PENDING' || o.status === 'PROCESSING'
+      new Date(o.createdAt) >= startOfMonth && 
+      (o.status === 'PENDING' || o.status === 'PROCESSING')
     ).length
-    const completedOrders = orders.filter(o => o.status === 'COMPLETED').length
+    const completedOrders = orders.filter(o => 
+      new Date(o.createdAt) >= startOfMonth && o.status === 'COMPLETED'
+    ).length
 
     // Calcular métricas
     const vendasMes = ordersThisMonth.length
@@ -53,12 +59,20 @@ export async function GET() {
       })
     }
 
-    // Status dos pedidos
+    // Status dos pedidos (apenas do mês atual)
     const statusCounts = {
-      PENDING: orders.filter(o => o.status === 'PENDING').length,
-      PROCESSING: orders.filter(o => o.status === 'PROCESSING').length,
-      COMPLETED: orders.filter(o => o.status === 'COMPLETED').length,
-      CANCELLED: orders.filter(o => o.status === 'CANCELLED').length,
+      PENDING: orders.filter(o => 
+        new Date(o.createdAt) >= startOfMonth && o.status === 'PENDING'
+      ).length,
+      PROCESSING: orders.filter(o => 
+        new Date(o.createdAt) >= startOfMonth && o.status === 'PROCESSING'
+      ).length,
+      COMPLETED: orders.filter(o => 
+        new Date(o.createdAt) >= startOfMonth && o.status === 'COMPLETED'
+      ).length,
+      CANCELLED: orders.filter(o => 
+        new Date(o.createdAt) >= startOfMonth && o.status === 'CANCELLED'
+      ).length,
     }
 
     const statusPedidos = [
