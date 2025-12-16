@@ -47,6 +47,19 @@ export async function POST(request: NextRequest) {
     const fileName = `${timestamp}_${originalName}`
 
     // Tentar usar Supabase Storage (produção)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    // Log para debug (apenas em desenvolvimento)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Debug Upload:', {
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseKey: !!supabaseKey,
+        supabaseUrlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'não configurado',
+        nodeEnv: process.env.NODE_ENV,
+      })
+    }
+
     const supabase = getSupabaseClient()
 
     if (supabase) {
@@ -91,10 +104,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Se chegou aqui, não há configuração e não está em desenvolvimento
+    const errorDetails = {
+      message: 'Upload de imagens não configurado.',
+      reason: !supabaseUrl && !supabaseKey 
+        ? 'Variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY não configuradas'
+        : !supabaseUrl 
+        ? 'Variável NEXT_PUBLIC_SUPABASE_URL não configurada'
+        : 'Variável NEXT_PUBLIC_SUPABASE_ANON_KEY não configurada',
+      solution: 'Configure as variáveis de ambiente na Vercel (Settings > Environment Variables) ou use URLs de imagens diretamente no formulário.',
+      code: 'STORAGE_NOT_CONFIGURED'
+    }
+
+    console.error('❌ Upload falhou:', errorDetails)
+
     return NextResponse.json(
       { 
-        error: 'Upload de imagens não configurado. Configure o Supabase Storage ou use URLs de imagens diretamente no formulário.',
-        code: 'STORAGE_NOT_CONFIGURED'
+        error: `${errorDetails.message} ${errorDetails.reason}. ${errorDetails.solution}`,
+        code: errorDetails.code
       },
       { status: 503 } // 503 Service Unavailable é mais apropriado
     )
