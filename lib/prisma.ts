@@ -7,6 +7,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+// Verificar se DATABASE_URL está configurada
+const databaseUrl = process.env.DATABASE_URL
+
+if (!databaseUrl && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ DATABASE_URL não configurada. Configure a variável de ambiente na Vercel.')
+}
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({

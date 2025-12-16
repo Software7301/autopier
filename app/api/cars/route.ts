@@ -30,16 +30,46 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(cars)
   } catch (error: any) {
-    console.error('Erro ao buscar carros:', error)
+    console.error('❌ Erro ao buscar carros:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack,
+    })
     
     // Se for erro de conexão com banco, retornar array vazio para não quebrar o frontend
-    if (error.code === 'P1001' || error.message?.includes('DATABASE_URL') || error.message?.includes('Environment variable')) {
-      console.warn('Banco de dados não configurado. Retornando array vazio.')
+    if (
+      error.code === 'P1001' || 
+      error.code === 'P1000' ||
+      error.message?.includes('DATABASE_URL') || 
+      error.message?.includes('Environment variable') ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
+      console.warn('⚠️ Banco de dados não configurado ou inacessível. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    // Se for erro de schema/tabela não existe
+    if (
+      error.code === 'P2021' ||
+      error.code === 'P2025' ||
+      error.message?.includes('does not exist') ||
+      error.message?.includes('relation') ||
+      error.message?.includes('table')
+    ) {
+      console.warn('⚠️ Tabela não encontrada. Execute as migrações do Prisma.')
       return NextResponse.json([])
     }
     
+    // Retornar erro genérico com mais detalhes em desenvolvimento
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Erro ao buscar carros: ${error.message || 'Erro desconhecido'}`
+      : 'Erro ao buscar carros'
+
     return NextResponse.json(
-      { error: 'Erro ao buscar carros' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
@@ -109,12 +139,37 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(car, { status: 201 })
   } catch (error: any) {
-    console.error('Erro ao criar veículo:', error)
+    console.error('❌ Erro ao criar veículo:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+    })
     
     // Se for erro de conexão com banco
-    if (error.code === 'P1001' || error.message?.includes('DATABASE_URL') || error.message?.includes('Environment variable')) {
+    if (
+      error.code === 'P1001' || 
+      error.code === 'P1000' ||
+      error.message?.includes('DATABASE_URL') || 
+      error.message?.includes('Environment variable') ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
       return NextResponse.json(
-        { error: 'Banco de dados não configurado. Configure a variável DATABASE_URL no arquivo .env' },
+        { error: 'Banco de dados não configurado. Configure a variável DATABASE_URL nas variáveis de ambiente da Vercel.' },
+        { status: 500 }
+      )
+    }
+
+    // Se for erro de schema/tabela não existe
+    if (
+      error.code === 'P2021' ||
+      error.code === 'P2025' ||
+      error.message?.includes('does not exist') ||
+      error.message?.includes('relation') ||
+      error.message?.includes('table')
+    ) {
+      return NextResponse.json(
+        { error: 'Tabela não encontrada. Execute as migrações do Prisma: npx prisma migrate dev' },
         { status: 500 }
       )
     }
