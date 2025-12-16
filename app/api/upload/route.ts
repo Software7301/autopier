@@ -92,8 +92,11 @@ export async function POST(request: NextRequest) {
 
     // Se chegou aqui, não há configuração e não está em desenvolvimento
     return NextResponse.json(
-      { error: 'Configuração de armazenamento não encontrada. Configure o Supabase Storage.' },
-      { status: 500 }
+      { 
+        error: 'Upload de imagens não configurado. Configure o Supabase Storage ou use URLs de imagens diretamente no formulário.',
+        code: 'STORAGE_NOT_CONFIGURED'
+      },
+      { status: 503 } // 503 Service Unavailable é mais apropriado
     )
   } catch (error: any) {
     console.error('Erro ao fazer upload:', error)

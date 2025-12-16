@@ -142,7 +142,21 @@ export default function VeiculosPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Erro ao fazer upload')
+        
+        // Se for erro de configuração, mostrar mensagem mais amigável
+        if (error.code === 'STORAGE_NOT_CONFIGURED' || response.status === 503) {
+          setErrorMessage(
+            '⚠️ Upload de imagens não está configurado. Por favor, use o campo "Ou cole uma URL da imagem" abaixo para adicionar uma imagem via URL.'
+          )
+          // Expandir automaticamente o campo de URL
+          const detailsElement = document.querySelector('details')
+          if (detailsElement) {
+            detailsElement.open = true
+          }
+        } else {
+          throw new Error(error.error || 'Erro ao fazer upload')
+        }
+        return
       }
 
       const data = await response.json()
@@ -703,16 +717,21 @@ export default function VeiculosPage() {
                     <summary className="text-text-muted cursor-pointer hover:text-white transition-colors">
                       Ou cole uma URL da imagem
                     </summary>
-                    <input
-                      type="url"
-                      value={formData.imageUrl || ''}
-                      onChange={(e) => {
-                        setFormData({ ...formData, imageUrl: e.target.value || '' })
-                        setImagePreview(e.target.value || '')
-                      }}
-                      placeholder="https://exemplo.com/imagem.jpg"
-                      className="input-field w-full mt-2"
-                    />
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="url"
+                        value={formData.imageUrl || ''}
+                        onChange={(e) => {
+                          setFormData({ ...formData, imageUrl: e.target.value || '' })
+                          setImagePreview(e.target.value || '')
+                        }}
+                        placeholder="https://exemplo.com/imagem.jpg"
+                        className="input-field w-full"
+                      />
+                      <p className="text-xs text-text-muted">
+                        💡 Dica: Você pode usar URLs de imagens de sites como Unsplash, Imgur, ou qualquer outro serviço de hospedagem de imagens.
+                      </p>
+                    </div>
                   </details>
                 </div>
               </div>
