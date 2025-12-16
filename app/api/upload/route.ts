@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,34 +37,69 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Criar diretório de uploads se não existir
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'cars')
-    if (!existsSync(uploadsDir)) {
-      mkdirSync(uploadsDir, { recursive: true })
-    }
-
-    // Gerar nome único para o arquivo
-    const timestamp = Date.now()
-    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const extension = originalName.split('.').pop()
-    const fileName = `${timestamp}_${originalName}`
-
     // Converter arquivo para buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Salvar arquivo
-    const filePath = join(uploadsDir, fileName)
-    await writeFile(filePath, buffer)
+    // Gerar nome único para o arquivo
+    const timestamp = Date.now()
+    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const fileName = `${timestamp}_${originalName}`
 
-    // Retornar URL da imagem
-    const imageUrl = `/uploads/cars/${fileName}`
+    // Tentar usar Supabase Storage (produção)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    return NextResponse.json({ url: imageUrl })
-  } catch (error) {
+    if (supabaseUrl && supabaseAnonKey) {
+      try {
+        // Upload para Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('cars')
+          .upload(fileName, buffer, {
+            contentType: file.type,
+            upsert: false,
+          })
+
+        if (error) {
+          console.error('Erro no Supabase Storage:', error)
+          throw error
+        }
+
+        // Obter URL pública
+        const { data: urlData } = supabase.storage
+          .from('cars')
+          .getPublicUrl(fileName)
+
+        return NextResponse.json({ url: urlData.publicUrl })
+      } catch (supabaseError) {
+        console.error('Erro ao fazer upload no Supabase:', supabaseError)
+        // Fallback para armazenamento local em desenvolvimento
+      }
+    }
+
+    // Fallback: Salvar localmente (apenas em desenvolvimento)
+    if (process.env.NODE_ENV === 'development') {
+      const uploadsDir = join(process.cwd(), 'public', 'uploads', 'cars')
+      if (!existsSync(uploadsDir)) {
+        mkdirSync(uploadsDir, { recursive: true })
+      }
+
+      const filePath = join(uploadsDir, fileName)
+      await writeFile(filePath, buffer)
+
+      const imageUrl = `/uploads/cars/${fileName}`
+      return NextResponse.json({ url: imageUrl })
+    }
+
+    // Se chegou aqui, não há configuração e não está em desenvolvimento
+    return NextResponse.json(
+      { error: 'Configuração de armazenamento não encontrada. Configure o Supabase Storage.' },
+      { status: 500 }
+    )
+  } catch (error: any) {
     console.error('Erro ao fazer upload:', error)
     return NextResponse.json(
-      { error: 'Erro ao fazer upload da imagem' },
+      { error: error.message || 'Erro ao fazer upload da imagem' },
       { status: 500 }
     )
   }

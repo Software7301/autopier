@@ -21,7 +21,27 @@ Este guia explica como configurar o banco de dados Supabase para o projeto AutoP
    postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
    ```
 
-### 2. Configurar Variáveis de Ambiente
+### 2. Configurar Storage do Supabase (para Upload de Imagens)
+
+1. Acesse o seu projeto no Supabase Dashboard
+2. Vá em **Storage** no menu lateral
+3. Clique em **Create a new bucket**
+4. Configure o bucket:
+   - **Name:** `cars`
+   - **Public bucket:** ✅ Marque como público (para permitir acesso às imagens)
+5. Clique em **Create bucket**
+6. Configure as políticas (opcional, mas recomendado):
+   - Vá em **Policies** do bucket `cars`
+   - Adicione uma política para permitir uploads anônimos ou configure conforme necessário
+
+### 3. Obter Credenciais do Supabase
+
+1. Acesse **Settings** → **API**
+2. Copie os seguintes valores:
+   - **Project URL** (será `NEXT_PUBLIC_SUPABASE_URL`)
+   - **anon public** key (será `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+
+### 4. Configurar Variáveis de Ambiente
 
 Adicione ou atualize as seguintes variáveis no arquivo `.env`:
 
@@ -29,8 +49,12 @@ Adicione ou atualize as seguintes variáveis no arquivo `.env`:
 # Modo de armazenamento: 'LOCAL' ou 'DATABASE'
 STORAGE_MODE=DATABASE
 
-# URL de conexão do Supabase
+# URL de conexão do Supabase (Database)
 DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+
+# Credenciais do Supabase (Storage)
+NEXT_PUBLIC_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
 
 # URL pública da aplicação (para produção)
 NEXT_PUBLIC_APP_URL=https://seu-dominio.com
@@ -39,9 +63,10 @@ NEXT_PUBLIC_APP_URL=https://seu-dominio.com
 **⚠️ IMPORTANTE:**
 - Substitua `[YOUR-PASSWORD]` pela senha do seu banco de dados
 - Substitua `[PROJECT-REF]` pela referência do seu projeto
+- Substitua `[YOUR-ANON-KEY]` pela chave anon pública do Supabase
 - Se a senha contém caracteres especiais, você pode precisar codificá-la (URL encode)
 
-### 3. Executar Migrações do Prisma
+### 5. Executar Migrações do Prisma
 
 Após configurar a `DATABASE_URL`, execute as migrações:
 
@@ -56,7 +81,7 @@ npx prisma migrate dev --name init
 npx prisma studio
 ```
 
-### 4. Verificar a Conexão
+### 6. Verificar a Conexão
 
 Após configurar, reinicie o servidor de desenvolvimento:
 
@@ -76,6 +101,10 @@ Para verificar se está funcionando:
 1. Acesse o dashboard: `http://localhost:3000/dashboard`
 2. Tente criar um veículo, pedido ou negociação
 3. Verifique no Supabase Dashboard → **Table Editor** se os dados foram salvos
+4. Teste o upload de imagens:
+   - Vá em **Gerenciar Veículos** → **Adicionar Veículo**
+   - Faça upload de uma imagem
+   - Verifique no Supabase Dashboard → **Storage** → **cars** se a imagem foi salva
 
 ## 📝 Estrutura do Banco de Dados
 
@@ -101,6 +130,12 @@ O schema Prisma cria as seguintes tabelas:
 ### Erro: "Relation does not exist"
 - Execute as migrações: `npx prisma migrate dev`
 - Verifique se o schema Prisma está atualizado
+
+### Erro: "Erro ao fazer upload da imagem"
+- Verifique se o bucket `cars` foi criado no Supabase Storage
+- Confirme que as variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` estão configuradas
+- Verifique se o bucket está configurado como público
+- Em desenvolvimento, o sistema usa armazenamento local como fallback
 
 ## 🔐 Segurança
 

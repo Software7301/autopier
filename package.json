@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
+    "@supabase/supabase-js": "^2.88.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.6",
     "lucide-react": "^0.378.0",
