@@ -131,7 +131,10 @@ export const db = {
         updatedAt: order.updatedAt.toISOString(),
       }
     }
-    return localStorage.updateOrder(id, data)
+    // Filtrar createdAt e updatedAt pois não devem ser atualizados manualmente
+    // e LocalOrder espera apenas string, não string | Date
+    const { createdAt, updatedAt, ...updateData } = data
+    return localStorage.updateOrder(id, updateData)
   },
 
   // ========== NEGOTIATIONS ==========
