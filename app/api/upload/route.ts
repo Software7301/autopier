@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
@@ -47,10 +47,9 @@ export async function POST(request: NextRequest) {
     const fileName = `${timestamp}_${originalName}`
 
     // Tentar usar Supabase Storage (produção)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabase = getSupabaseClient()
 
-    if (supabaseUrl && supabaseAnonKey) {
+    if (supabase) {
       try {
         // Upload para Supabase Storage
         const { data, error } = await supabase.storage

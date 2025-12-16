@@ -1,12 +1,28 @@
 // Cliente Supabase para Storage
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+let supabaseClient: SupabaseClient | null = null
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ Supabase credentials não configuradas. Upload de imagens pode não funcionar.')
+export function getSupabaseClient(): SupabaseClient | null {
+  // Se já foi criado, retorna o cliente existente
+  if (supabaseClient) {
+    return supabaseClient
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Só cria o cliente se as credenciais estiverem configuradas
+  if (supabaseUrl && supabaseAnonKey) {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    return supabaseClient
+  }
+
+  // Retorna null se as credenciais não estiverem configuradas
+  return null
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Exportar função para compatibilidade (mas não usar diretamente)
+export const supabase = getSupabaseClient()
+
 
