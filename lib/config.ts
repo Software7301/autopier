@@ -19,24 +19,21 @@ export const config = {
   },
 }
 
-// Configurar variáveis de ambiente para o Prisma
-// Usar função para evitar problemas com minificador
-(function setEnvVars() {
-  if (typeof process !== 'undefined' && process.env) {
-    const env = process.env
-    const dbUrl = config.database.url
-    const supabaseUrl = config.supabase.url
-    const appUrl = config.app.url
-    
-    if (!env.DATABASE_URL) {
-      env.DATABASE_URL = dbUrl
-    }
-    if (!env.NEXT_PUBLIC_SUPABASE_URL) {
-      env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl
-    }
-    if (!env.NEXT_PUBLIC_APP_URL) {
-      env.NEXT_PUBLIC_APP_URL = appUrl
-    }
+// Configurar variáveis de ambiente para o Prisma (apenas se não estiverem definidas)
+if (typeof process !== 'undefined' && process.env) {
+  const env = process.env
+  const dbUrl = config.database.url
+  const supabaseUrl = config.supabase.url
+  const appUrl = config.app.url
+  
+  if (!env.DATABASE_URL) {
+    env.DATABASE_URL = dbUrl
   }
-})()
+  if (!env.NEXT_PUBLIC_SUPABASE_URL) {
+    env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl
+  }
+  if (!env.NEXT_PUBLIC_APP_URL) {
+    env.NEXT_PUBLIC_APP_URL = appUrl
+  }
+}
 
