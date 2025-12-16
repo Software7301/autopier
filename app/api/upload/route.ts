@@ -4,6 +4,40 @@ import { createClient } from '@supabase/supabase-js'
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic'
 
+// Usar runtime Node.js (não Edge) para compatibilidade com Buffer
+export const runtime = 'nodejs'
+
+// Configurar CORS para produção
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+// Handler para OPTIONS (preflight)
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders })
+}
+
+// GET - Informações sobre o endpoint (evita 405 quando acessado diretamente)
+export async function GET() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  return NextResponse.json(
+    {
+      message: 'Endpoint de upload de imagens',
+      method: 'POST',
+      status: supabaseUrl && supabaseKey ? 'configured' : 'not_configured',
+      instructions: {
+        method: 'Use POST com FormData contendo o campo "file"',
+        example: 'const formData = new FormData(); formData.append("file", file); fetch("/api/upload", { method: "POST", body: formData })',
+      },
+    },
+    { headers: corsHeaders }
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -12,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { error: 'Nenhum arquivo enviado' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -21,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
         { error: 'Tipo de arquivo não permitido. Use PNG, JPG ou WEBP.' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -30,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: 'Arquivo muito grande. Tamanho máximo: 5MB' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -60,7 +94,7 @@ export async function POST(request: NextRequest) {
           error: 'Supabase Storage não está configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.',
           code: 'STORAGE_NOT_CONFIGURED'
         },
-        { status: 503 }
+        { status: 503, headers: corsHeaders }
       )
     }
 
@@ -72,7 +106,7 @@ export async function POST(request: NextRequest) {
           error: `URL do Supabase inválida. Deve terminar com .supabase.com`,
           code: 'INVALID_SUPABASE_URL'
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -90,7 +124,7 @@ export async function POST(request: NextRequest) {
           code: 'BUCKET_ACCESS_ERROR',
           details: bucketError
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -111,7 +145,7 @@ export async function POST(request: NextRequest) {
             '6. Clique em "Create bucket"'
           ]
         },
-        { status: 404 }
+        { status: 404, headers: corsHeaders }
       )
     }
 
@@ -146,7 +180,7 @@ export async function POST(request: NextRequest) {
               code: 'UPLOAD_ERROR',
               details: retryError
             },
-            { status: 500 }
+            { status: 500, headers: corsHeaders }
           )
         }
 
@@ -154,10 +188,13 @@ export async function POST(request: NextRequest) {
           .from('cars')
           .getPublicUrl(retryFileName)
 
-        return NextResponse.json({ 
-          url: urlData.publicUrl,
-          fileName: retryFileName
-        })
+        return NextResponse.json(
+          { 
+            url: urlData.publicUrl,
+            fileName: retryFileName
+          },
+          { headers: corsHeaders }
+        )
       }
 
       return NextResponse.json(
@@ -166,7 +203,7 @@ export async function POST(request: NextRequest) {
           code: 'UPLOAD_ERROR',
           details: uploadError
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -182,10 +219,13 @@ export async function POST(request: NextRequest) {
       type: file.type,
     })
 
-    return NextResponse.json({ 
-      url: urlData.publicUrl,
-      fileName
-    })
+    return NextResponse.json(
+      { 
+        url: urlData.publicUrl,
+        fileName
+      },
+      { headers: corsHeaders }
+    )
 
   } catch (error: any) {
     console.error('❌ Erro inesperado no upload:', error)
@@ -194,7 +234,7 @@ export async function POST(request: NextRequest) {
         error: error.message || 'Erro inesperado ao fazer upload da imagem',
         code: 'UNEXPECTED_ERROR'
       },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }
