@@ -8,36 +8,11 @@ export const runtime = 'nodejs'
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic'
 
-// Verificar se DATABASE_URL está disponível em runtime
-function checkDatabaseConnection() {
-  const databaseUrl = process.env.DATABASE_URL
-  
-  if (!databaseUrl) {
-    console.error('❌ DATABASE_URL não encontrada em process.env')
-    console.error('Variáveis disponíveis:', Object.keys(process.env).filter(k => k.includes('DATABASE')))
-    return false
-  }
-  
-  // Verificar se a URL é válida
-  if (!databaseUrl.startsWith('postgresql://') && !databaseUrl.startsWith('postgres://')) {
-    console.error('❌ DATABASE_URL formato inválido:', databaseUrl.substring(0, 20) + '...')
-    return false
-  }
-  
-  return true
-}
-
 // =======================
 // GET - Listar veículos
 // =======================
 export async function GET(request: NextRequest) {
   try {
-    // Verificar conexão antes de usar Prisma
-    if (!checkDatabaseConnection()) {
-      console.warn('⚠️ DATABASE_URL não configurada. Retornando array vazio.')
-      return NextResponse.json([])
-    }
-
     const searchParams = request.nextUrl.searchParams
     const category = searchParams.get('category')
     const available = searchParams.get('available') !== 'false'
@@ -66,13 +41,12 @@ export async function GET(request: NextRequest) {
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
 
-    // Erros de conexão do Prisma
+    // Erros de conexão do Prisma - deixar o Prisma lidar com a mensagem
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
       error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('DATABASE_URL') ||
       error.message?.includes('Can\'t reach database server')
     ) {
       console.warn('⚠️ Banco indisponível. Retornando array vazio.')
@@ -91,18 +65,6 @@ export async function GET(request: NextRequest) {
 // =======================
 export async function POST(request: NextRequest) {
   try {
-    // Verificar conexão ANTES de processar o body
-    if (!checkDatabaseConnection()) {
-      console.error('❌ DATABASE_URL não configurada em runtime')
-      return NextResponse.json(
-        {
-          error: 'Banco de dados não configurado. Verifique DATABASE_URL na Vercel.',
-          details: 'A variável DATABASE_URL não está disponível em runtime. Verifique se está configurada corretamente no painel da Vercel.',
-        },
-        { status: 500 }
-      )
-    }
-
     const body = await request.json()
 
     const {
@@ -171,20 +133,20 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
 
-    // Erros de conexão do Prisma
+    // Erros de conexão do Prisma - retornar mensagem real do Prisma
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
       error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('DATABASE_URL') ||
       error.message?.includes('Can\'t reach database server') ||
       error.message?.includes('Environment variable not found')
     ) {
       return NextResponse.json(
         {
-          error: 'Banco de dados não configurado. Verifique DATABASE_URL na Vercel.',
-          details: `Erro do Prisma: ${error.code || error.name} - ${error.message}`,
+          error: 'Erro de conexão com o banco de dados',
+          details: error.message,
+          code: error.code,
         },
         { status: 500 }
       )
