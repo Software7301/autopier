@@ -13,10 +13,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Validar que a URL termina com .supabase.com (não .supabase.co)
-if (supabaseUrl && !supabaseUrl.endsWith('.supabase.com') && !supabaseUrl.includes('.supabase.com/')) {
+// Validar que a URL termina com .supabase.com ou .supabase.co
+const isValidUrl = supabaseUrl && (
+  supabaseUrl.endsWith('.supabase.com') || 
+  supabaseUrl.endsWith('.supabase.co') ||
+  supabaseUrl.includes('.supabase.com/') ||
+  supabaseUrl.includes('.supabase.co/')
+)
+
+if (supabaseUrl && !isValidUrl) {
   console.warn(
-    `⚠️ A URL do Supabase pode estar incorreta: ${supabaseUrl}. Deve terminar com .supabase.com`
+    `⚠️ A URL do Supabase pode estar incorreta: ${supabaseUrl}. Deve terminar com .supabase.com ou .supabase.co`
   )
 }
 

@@ -42,10 +42,15 @@ function getSupabaseClient() {
     )
   }
 
-  // Validar que a URL termina com .supabase.com
-  if (!supabaseUrl.endsWith('.supabase.com') && !supabaseUrl.includes('.supabase.com/')) {
+  // Validar que a URL termina com .supabase.com ou .supabase.co
+  const isValidUrl = supabaseUrl.endsWith('.supabase.com') || 
+                     supabaseUrl.endsWith('.supabase.co') ||
+                     supabaseUrl.includes('.supabase.com/') ||
+                     supabaseUrl.includes('.supabase.co/')
+  
+  if (!isValidUrl) {
     throw new Error(
-      `URL do Supabase inválida: ${supabaseUrl}. Deve terminar com .supabase.com`
+      `URL do Supabase inválida: ${supabaseUrl}. Deve terminar com .supabase.com ou .supabase.co`
     )
   }
 
