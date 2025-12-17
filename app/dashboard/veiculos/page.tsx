@@ -638,7 +638,7 @@ export default function VeiculosPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/png,image/jpeg,image/jpg"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif"
                     onChange={handleImageUpload}
                     className="hidden"
                     id="image-upload"
@@ -668,7 +668,7 @@ export default function VeiculosPage() {
                         <span className="text-text-secondary">
                           {imagePreview || formData.imageUrl
                             ? 'Trocar imagem'
-                            : 'Selecionar imagem (PNG ou JPG)'
+                            : 'Selecionar imagem (JPG, PNG, WEBP, GIF ou AVIF)'
                           }
                         </span>
                       </>

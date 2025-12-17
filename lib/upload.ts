@@ -4,6 +4,32 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+// MIME types permitidos para imagens
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+]
+
+// Extensões permitidas (normalizadas para lowercase)
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']
+
+// Função para validar extensão de arquivo
+function isValidExtension(filename: string): boolean {
+  const extension = filename.split('.').pop()?.toLowerCase()
+  return extension ? ALLOWED_EXTENSIONS.includes(extension) : false
+}
+
+// Função para normalizar extensão (jpg -> jpeg para consistência)
+function normalizeExtension(filename: string): string {
+  const extension = filename.split('.').pop()?.toLowerCase() || 'jpg'
+  // Normalizar jpg para jpeg
+  return extension === 'jpg' ? 'jpeg' : extension
+}
+
 // Criar cliente Supabase para uso no frontend
 // Usa APENAS variáveis de ambiente - NUNCA URLs hardcoded
 function getSupabaseClient() {
@@ -36,10 +62,24 @@ export async function uploadImageToSupabase(
   file: File,
   bucket: string = 'cars'
 ): Promise<string> {
-  // Validar tipo de arquivo
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error('Tipo de arquivo não permitido. Use PNG, JPG ou WEBP.')
+  // Validar e normalizar MIME type
+  let mimeType = file.type.toLowerCase()
+  // Normalizar image/jpg para image/jpeg (padrão)
+  if (mimeType === 'image/jpg') {
+    mimeType = 'image/jpeg'
+  }
+  
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    throw new Error(
+      'Tipo de arquivo não permitido. Use JPG, JPEG, PNG, WEBP, GIF ou AVIF.'
+    )
+  }
+
+  // Validar extensão do arquivo (segurança adicional)
+  if (!isValidExtension(file.name)) {
+    throw new Error(
+      'Extensão de arquivo não permitida. Use .jpg, .jpeg, .png, .webp, .gif ou .avif'
+    )
   }
 
   // Validar tamanho (máximo 5MB)
@@ -48,11 +88,11 @@ export async function uploadImageToSupabase(
     throw new Error('Arquivo muito grande. Tamanho máximo: 5MB')
   }
 
-  // Gerar nome único para o arquivo
+  // Gerar nome único para o arquivo (normalizado)
   const timestamp = Date.now()
   const randomStr = Math.random().toString(36).substring(2, 15)
   const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-  const extension = originalName.split('.').pop() || 'jpg'
+  const extension = normalizeExtension(originalName)
   const fileName = `${timestamp}_${randomStr}.${extension}`
 
   // Criar cliente Supabase
@@ -61,11 +101,11 @@ export async function uploadImageToSupabase(
   // Converter arquivo para ArrayBuffer
   const arrayBuffer = await file.arrayBuffer()
 
-  // Fazer upload para Supabase Storage
+  // Fazer upload para Supabase Storage (usar MIME type normalizado)
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(fileName, arrayBuffer, {
-      contentType: file.type,
+      contentType: mimeType,
       upsert: false,
       cacheControl: '3600',
     })
@@ -77,7 +117,7 @@ export async function uploadImageToSupabase(
       const { data: retryData, error: retryError } = await supabase.storage
         .from(bucket)
         .upload(retryFileName, arrayBuffer, {
-          contentType: file.type,
+          contentType: mimeType,
           upsert: false,
           cacheControl: '3600',
         })

@@ -14,6 +14,32 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
+// MIME types permitidos para imagens
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+]
+
+// Extensões permitidas (normalizadas para lowercase)
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']
+
+// Função para validar extensão de arquivo
+function isValidExtension(filename: string): boolean {
+  const extension = filename.split('.').pop()?.toLowerCase()
+  return extension ? ALLOWED_EXTENSIONS.includes(extension) : false
+}
+
+// Função para normalizar extensão (jpg -> jpeg para consistência)
+function normalizeExtension(filename: string): string {
+  const extension = filename.split('.').pop()?.toLowerCase() || 'jpg'
+  // Normalizar jpg para jpeg
+  return extension === 'jpg' ? 'jpeg' : extension
+}
+
 // Handler para OPTIONS (preflight)
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders })
@@ -50,11 +76,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar tipo de arquivo
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
+    // Validar e normalizar MIME type
+    let mimeType = file.type.toLowerCase()
+    // Normalizar image/jpg para image/jpeg (padrão)
+    if (mimeType === 'image/jpg') {
+      mimeType = 'image/jpeg'
+    }
+    
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
       return NextResponse.json(
-        { error: 'Tipo de arquivo não permitido. Use PNG, JPG ou WEBP.' },
+        { 
+          error: 'Tipo de arquivo não permitido. Use JPG, JPEG, PNG, WEBP, GIF ou AVIF.',
+          allowedTypes: ALLOWED_MIME_TYPES,
+          receivedType: file.type
+        },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
+    // Validar extensão do arquivo (segurança adicional)
+    if (!isValidExtension(file.name)) {
+      return NextResponse.json(
+        { 
+          error: 'Extensão de arquivo não permitida. Use .jpg, .jpeg, .png, .webp, .gif ou .avif',
+          allowedExtensions: ALLOWED_EXTENSIONS,
+          receivedExtension: file.name.split('.').pop()
+        },
         { status: 400, headers: corsHeaders }
       )
     }
@@ -72,11 +119,11 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Gerar nome único para o arquivo
+    // Gerar nome único para o arquivo (normalizado)
     const timestamp = Date.now()
     const randomStr = Math.random().toString(36).substring(2, 15)
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const extension = originalName.split('.').pop() || 'jpg'
+    const extension = normalizeExtension(originalName)
     const fileName = `${timestamp}_${randomStr}.${extension}`
 
     // Obter credenciais do Supabase APENAS de variáveis de ambiente
@@ -149,11 +196,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fazer upload para Supabase Storage
+    // Fazer upload para Supabase Storage (usar MIME type normalizado)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('cars')
       .upload(fileName, buffer, {
-        contentType: file.type,
+        contentType: mimeType,
         upsert: false,
         cacheControl: '3600',
       })
@@ -168,7 +215,7 @@ export async function POST(request: NextRequest) {
         const { data: retryData, error: retryError } = await supabase.storage
           .from('cars')
           .upload(retryFileName, buffer, {
-            contentType: file.type,
+            contentType: mimeType,
             upsert: false,
             cacheControl: '3600',
           })
