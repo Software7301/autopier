@@ -40,14 +40,20 @@ export async function GET(request: NextRequest) {
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erros de conexão do Prisma - deixar o Prisma lidar com a mensagem
+    // Erros de conexão do Prisma - todos os códigos possíveis
     if (
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
+      error.code === 'P1001' || // Can't reach database server
+      error.code === 'P1000' || // Authentication failed
+      error.code === 'P1017' || // Server has closed the connection
+      error.code === 'P1002' || // Database server connection timeout
+      error.code === 'P1003' || // Database does not exist
       error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server')
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('SSL') ||
+      error.message?.includes('timeout')
     ) {
       console.warn('⚠️ Banco indisponível. Retornando array vazio.')
       return NextResponse.json([])
@@ -131,22 +137,28 @@ export async function POST(request: NextRequest) {
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão do Prisma - retornar mensagem real do Prisma
     if (
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
+      error.code === 'P1001' || // Can't reach database server
+      error.code === 'P1000' || // Authentication failed
+      error.code === 'P1017' || // Server has closed the connection
+      error.code === 'P1002' || // Database server connection timeout
+      error.code === 'P1003' || // Database does not exist
       error.name === 'PrismaClientInitializationError' ||
       error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Environment variable not found')
+      error.message?.includes('Environment variable not found') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('SSL') ||
+      error.message?.includes('timeout') ||
+      error.message?.includes('certificate')
     ) {
       return NextResponse.json(
         {
           error: 'Erro de conexão com o banco de dados',
           details: error.message,
-          code: error.code,
+          code: error.code || error.name,
         },
         { status: 500 }
       )
