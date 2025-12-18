@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { PaymentMethod, OrderStatus } from '@prisma/client'
 
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+// Edge runtime NÃO suporta Prisma - FORÇAR Node.js
+export const runtime = 'nodejs'
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic'
+
 // ================= Validações =================
 function validateRg(rg: string): boolean {
   return /^\d{6}$/.test(rg.replace(/\D/g, ''))
@@ -48,6 +55,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validar totalPrice
+    const price = Number(totalPrice)
+    if (isNaN(price) || price <= 0) {
+      errors.price = 'Preço total inválido'
+    }
+
     if (Object.keys(errors).length > 0) {
       return NextResponse.json({ error: 'Dados inválidos', errors }, { status: 400 })
     }
@@ -71,7 +84,7 @@ export async function POST(request: Request) {
         paymentMethod,
         installments: finalInstallments,
         selectedColor: selectedColor || car.color || 'Preto',
-        totalPrice,
+        totalPrice: price, // Garantir que é número
         status: OrderStatus.PENDING,
       }
     })
@@ -80,10 +93,53 @@ export async function POST(request: Request) {
       success: true,
       orderId: order.id
     })
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Checkout error:', err)
+    console.error('Error code:', err.code)
+    console.error('Error name:', err.name)
+    console.error('Error message:', err.message)
+    console.error('Error stack:', err.stack?.substring(0, 500))
+
+    // Erros de conexão do Prisma
+    if (
+      err.code === 'P1001' ||
+      err.code === 'P1000' ||
+      err.code === 'P1017' ||
+      err.name === 'PrismaClientInitializationError' ||
+      err.message?.includes('Can\'t reach database server') ||
+      err.message?.includes('Environment variable not found')
+    ) {
+      return NextResponse.json(
+        {
+          error: 'Erro de conexão com o banco de dados',
+          details: err.message,
+          code: err.code || err.name,
+        },
+        { status: 500 }
+      )
+    }
+
+    // Erros de validação do Prisma
+    if (err.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Pedido com dados duplicados' },
+        { status: 409 }
+      )
+    }
+
+    // Erros de foreign key (carro não existe)
+    if (err.code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Veículo não encontrado ou inválido' },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Erro interno no checkout' },
+      {
+        error: 'Erro interno no checkout',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -98,8 +154,26 @@ export async function GET() {
     })
 
     return NextResponse.json(orders)
-  } catch (err) {
-    console.error(err)
-    return NextResponse.json([], { status: 500 })
+  } catch (err: any) {
+    console.error('❌ Erro ao buscar pedidos:', err)
+    console.error('Error code:', err.code)
+    console.error('Error message:', err.message)
+
+    // Erros de conexão do Prisma - retornar array vazio
+    if (
+      err.code === 'P1001' ||
+      err.code === 'P1000' ||
+      err.code === 'P1017' ||
+      err.name === 'PrismaClientInitializationError' ||
+      err.message?.includes('Can\'t reach database server')
+    ) {
+      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    return NextResponse.json(
+      { error: 'Erro ao buscar pedidos' },
+      { status: 500 }
+    )
   }
 }
