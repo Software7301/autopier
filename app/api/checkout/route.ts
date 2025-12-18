@@ -1,27 +1,21 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { PaymentMethod, OrderStatus } from '@prisma/client'
+import { PrismaClient, PaymentMethod, OrderStatus } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
-// Edge runtime NÃO suporta Prisma - FORÇAR Node.js
-export const runtime = 'nodejs'
+const prisma = new PrismaClient()
 
-// Forçar renderização dinâmica
-export const dynamic = 'force-dynamic'
-
-// ================= Validações =================
-function validateRg(rg: string): boolean {
+// ===== VALIDADORES =====
+function validateRg(rg: string) {
   return /^\d{6}$/.test(rg.replace(/\D/g, ''))
 }
 
-function validatePhone(phone: string): boolean {
+function validatePhone(phone: string) {
   return phone.replace(/\D/g, '').length >= 6
 }
 
-// ================= POST =================
-export async function POST(request: Request) {
+// ===== POST /api/checkout =====
+export async function POST(req: Request) {
   try {
-    const body = await request.json()
+    const body = await req.json()
 
     const {
       carId,
@@ -34,47 +28,41 @@ export async function POST(request: Request) {
       selectedColor,
     } = body
 
-    const errors: Record<string, string> = {}
+    // ===== VALIDAÇÕES =====
+    if (!carId) {
+      return NextResponse.json({ error: 'Carro não informado' }, { status: 400 })
+    }
 
-    if (!carId) errors.carId = 'Veículo inválido'
-    if (!customerName?.trim()) errors.name = 'Nome obrigatório'
-    if (!validateRg(customerRg)) errors.rg = 'RG inválido'
-    if (!validatePhone(customerPhone)) errors.phone = 'Telefone inválido'
+    if (!customerName?.trim()) {
+      return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
+    }
+
+    if (!validateRg(customerRg)) {
+      return NextResponse.json({ error: 'RG inválido' }, { status: 400 })
+    }
+
+    if (!validatePhone(customerPhone)) {
+      return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 })
+    }
 
     if (!Object.values(PaymentMethod).includes(paymentMethod)) {
-      errors.payment = 'Forma de pagamento inválida'
+      return NextResponse.json({ error: 'Forma de pagamento inválida' }, { status: 400 })
     }
 
-    let finalInstallments = 1
-    if (paymentMethod === PaymentMethod.CARTAO_CREDITO) {
-      const n = Number(installments)
-      if (n < 1 || n > 12) {
-        errors.installments = 'Parcelamento deve ser entre 1 e 12x'
-      } else {
-        finalInstallments = n
-      }
-    }
-
-    // Validar totalPrice
-    const price = Number(totalPrice)
-    if (isNaN(price) || price <= 0) {
-      errors.price = 'Preço total inválido'
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return NextResponse.json({ error: 'Dados inválidos', errors }, { status: 400 })
-    }
-
-    // ===== Verifica carro =====
+    // ===== VERIFICAR CARRO =====
     const car = await prisma.car.findUnique({
-      where: { id: carId }
+      where: { id: carId },
     })
 
     if (!car) {
-      return NextResponse.json({ error: 'Veículo não encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Carro não encontrado' }, { status: 404 })
     }
 
-    // ===== Cria pedido =====
+    if (!car.available) {
+      return NextResponse.json({ error: 'Carro indisponível' }, { status: 400 })
+    }
+
+    // ===== CRIAR PEDIDO =====
     const order = await prisma.order.create({
       data: {
         carId,
@@ -82,97 +70,24 @@ export async function POST(request: Request) {
         customerRg: customerRg.replace(/\D/g, ''),
         customerPhone: customerPhone.replace(/\D/g, ''),
         paymentMethod,
-        installments: finalInstallments,
-        selectedColor: selectedColor || car.color || 'Preto',
-        totalPrice: price, // Garantir que é número
+        totalPrice: Number(totalPrice),
+        installments:
+          paymentMethod === PaymentMethod.CARTAO_CREDITO
+            ? Number(installments) || 1
+            : 1,
+        selectedColor: selectedColor || null,
         status: OrderStatus.PENDING,
-      }
+      },
     })
 
     return NextResponse.json({
       success: true,
-      orderId: order.id
+      orderId: order.id,
     })
-  } catch (err: any) {
-    console.error('❌ Checkout error:', err)
-    console.error('Error code:', err.code)
-    console.error('Error name:', err.name)
-    console.error('Error message:', err.message)
-    console.error('Error stack:', err.stack?.substring(0, 500))
-
-    // Erros de conexão do Prisma
-    if (
-      err.code === 'P1001' ||
-      err.code === 'P1000' ||
-      err.code === 'P1017' ||
-      err.name === 'PrismaClientInitializationError' ||
-      err.message?.includes('Can\'t reach database server') ||
-      err.message?.includes('Environment variable not found')
-    ) {
-      return NextResponse.json(
-        {
-          error: 'Erro de conexão com o banco de dados',
-          details: err.message,
-          code: err.code || err.name,
-        },
-        { status: 500 }
-      )
-    }
-
-    // Erros de validação do Prisma
-    if (err.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Pedido com dados duplicados' },
-        { status: 409 }
-      )
-    }
-
-    // Erros de foreign key (carro não existe)
-    if (err.code === 'P2003') {
-      return NextResponse.json(
-        { error: 'Veículo não encontrado ou inválido' },
-        { status: 404 }
-      )
-    }
-
+  } catch (error) {
+    console.error('❌ Checkout error:', error)
     return NextResponse.json(
-      {
-        error: 'Erro interno no checkout',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// ================= GET =================
-export async function GET() {
-  try {
-    const orders = await prisma.order.findMany({
-      include: { car: true },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    return NextResponse.json(orders)
-  } catch (err: any) {
-    console.error('❌ Erro ao buscar pedidos:', err)
-    console.error('Error code:', err.code)
-    console.error('Error message:', err.message)
-
-    // Erros de conexão do Prisma - retornar array vazio
-    if (
-      err.code === 'P1001' ||
-      err.code === 'P1000' ||
-      err.code === 'P1017' ||
-      err.name === 'PrismaClientInitializationError' ||
-      err.message?.includes('Can\'t reach database server')
-    ) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
-    }
-
-    return NextResponse.json(
-      { error: 'Erro ao buscar pedidos' },
+      { error: 'Erro interno no checkout' },
       { status: 500 }
     )
   }
