@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(cars)
+    // Garantir que sempre retorna um array
+    return NextResponse.json(Array.isArray(cars) ? cars : [])
   } catch (error: any) {
     console.error('❌ Erro ao buscar carros:', error)
     console.error('Error code:', error.code)
@@ -42,27 +43,10 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erros de conexão do Prisma - todos os códigos possíveis
-    if (
-      error.code === 'P1001' || // Can't reach database server
-      error.code === 'P1000' || // Authentication failed
-      error.code === 'P1017' || // Server has closed the connection
-      error.code === 'P1002' || // Database server connection timeout
-      error.code === 'P1003' || // Database does not exist
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('SSL') ||
-      error.message?.includes('timeout')
-    ) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
-    }
-
-    return NextResponse.json(
-      { error: 'Erro ao buscar carros' },
-      { status: 500 }
-    )
+    // ⚠️ IMPORTANTE: SEMPRE retornar array vazio, nunca objeto de erro
+    // Isso evita que o frontend quebre no .filter()
+    console.warn('⚠️ Erro ao buscar carros. Retornando array vazio para evitar crash no frontend.')
+    return NextResponse.json([])
   }
 }
 
