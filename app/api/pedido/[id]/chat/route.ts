@@ -1,17 +1,26 @@
-import { NextResponse } from 'next/server'
-import { getOrderById, getMessagesByOrderId, createMessage, onMessageSent, markChatAsRead } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // GET - Buscar mensagens do pedido
+// NOTA: O schema Prisma atual não tem Message vinculada a Order, apenas a Negotiation
+// Esta rota retorna vazio por enquanto, mas mantém a estrutura para compatibilidade
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const clientPhone = searchParams.get('phone') // Telefone do cliente para validação
     
-    const order = getOrderById(id)
+    const order = await prisma.order.findUnique({
+      where: { id },
+    })
+
     if (!order) {
       return NextResponse.json(
         { error: 'Pedido não encontrado' },
@@ -32,34 +41,36 @@ export async function GET(
       }
     }
 
-    const messages = getMessagesByOrderId(id)
-
+    // NOTA: Messages não estão vinculadas a Orders no schema atual
+    // Retornar estrutura vazia para manter compatibilidade
     return NextResponse.json({
       orderId: id,
       customerName: order.customerName,
-      messages: messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        sender: msg.sender,
-        senderName: msg.senderName,
-        createdAt: msg.createdAt,
-      })),
+      messages: [],
     })
-  } catch (error) {
-    console.error('Erro ao buscar mensagens do pedido:', error)
-    return NextResponse.json({ messages: [] })
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar mensagens do pedido:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    return NextResponse.json(
+      { error: 'Erro ao buscar mensagens do pedido' },
+      { status: 500 }
+    )
   }
 }
 
 // POST - Enviar mensagem no chat do pedido
+// NOTA: O schema Prisma atual não suporta mensagens para Orders
+// Esta rota retorna erro informativo, mas mantém a estrutura para compatibilidade
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const body = await request.json()
-    const { content, sender, senderName } = body
+    const { content } = body
 
     if (!content || !content.trim()) {
       return NextResponse.json(
@@ -68,7 +79,10 @@ export async function POST(
       )
     }
 
-    const order = getOrderById(id)
+    const order = await prisma.order.findUnique({
+      where: { id },
+    })
+
     if (!order) {
       return NextResponse.json(
         { error: 'Pedido não encontrado' },
@@ -76,23 +90,17 @@ export async function POST(
       )
     }
 
-    // Criar mensagem vinculada ao pedido
-    const message = createMessage({
-      orderId: id,
-      content: content.trim(),
-      sender: sender || 'cliente',
-      senderName: senderName || order.customerName,
-    })
+    // NOTA: Messages não estão vinculadas a Orders no schema atual
+    // Retornar erro informativo
+    return NextResponse.json(
+      { error: 'Mensagens para pedidos não estão disponíveis no momento. Use negociações para comunicação.' },
+      { status: 501 }
+    )
+  } catch (error: any) {
+    console.error('❌ Erro ao enviar mensagem:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
 
-    // Atualizar sessão de chat (persistência)
-    const isFromClient = (sender || 'cliente') === 'cliente'
-    onMessageSent('order', id, message, isFromClient)
-
-    console.log('✅ Mensagem do pedido criada:', message.id)
-
-    return NextResponse.json(message, { status: 201 })
-  } catch (error) {
-    console.error('Erro ao enviar mensagem:', error)
     return NextResponse.json(
       { error: 'Erro ao enviar mensagem' },
       { status: 500 }

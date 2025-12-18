@@ -1,16 +1,14 @@
-import { NextResponse } from 'next/server'
-import { 
-  getNegotiations, 
-  createNegotiation, 
-  getCarById, 
-  createChatSession,
-  getChatSessionByReference,
-  createMessage,
-  onMessageSent
-} from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { NegotiationType, NegotiationStatus } from '@prisma/client'
+import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
+
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // POST - Criar ou reutilizar negociação rapidamente (apenas carId e telefone)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { carId, customerPhone, customerName } = body
@@ -24,18 +22,35 @@ export async function POST(request: Request) {
 
     const normalizedPhone = customerPhone.replace(/\D/g, '')
 
+    // Verificar se o carro existe
+    const car = await prisma.car.findUnique({
+      where: { id: carId },
+    })
+
+    if (!car) {
+      return NextResponse.json(
+        { error: 'Veículo não encontrado' },
+        { status: 404 }
+      )
+    }
+
+    // Obter ou criar buyer e seller
+    const buyerId = await getOrCreateBuyer(normalizedPhone, customerName || 'Cliente')
+    const sellerId = await getOrCreateSeller()
+
     // Verificar se já existe negociação ativa para este carro e telefone
-    const existingNegotiations = getNegotiations()
-    const existingNegotiation = existingNegotiations.find(
-      n => n.carId === carId && 
-           n.customerPhone.replace(/\D/g, '') === normalizedPhone &&
-           (n.status === 'PENDING' || n.status === 'IN_PROGRESS' || n.status === 'OPEN')
-    )
+    const existingNegotiation = await prisma.negotiation.findFirst({
+      where: {
+        carId,
+        buyerId,
+        status: {
+          in: [NegotiationStatus.OPEN, NegotiationStatus.IN_PROGRESS],
+        },
+      },
+    })
 
     if (existingNegotiation) {
       // Reutilizar negociação existente
-      const chatSession = getChatSessionByReference('negotiation', existingNegotiation.id)
-      
       return NextResponse.json({
         negotiationId: existingNegotiation.id,
         chatId: existingNegotiation.id, // O chatId é o negotiationId
@@ -45,39 +60,25 @@ export async function POST(request: Request) {
     }
 
     // Criar nova negociação
-    const car = getCarById(carId)
-    const negotiation = createNegotiation({
-      carId,
-      customerName: customerName || 'Cliente',
-      customerPhone: normalizedPhone,
-      customerEmail: '',
-      type: 'COMPRA',
-      status: 'PENDING',
+    const negotiation = await prisma.negotiation.create({
+      data: {
+        type: NegotiationType.BUY,
+        carId,
+        buyerId,
+        sellerId,
+        status: NegotiationStatus.OPEN,
+      },
     })
 
     // Criar mensagem inicial
     const initialMessage = `Olá! Tenho interesse em negociar o veículo ${car.name}.`
-    const msg = createMessage({
-      negotiationId: negotiation.id,
-      content: initialMessage,
-      sender: 'cliente',
-      senderName: customerName || 'Cliente',
+    await prisma.message.create({
+      data: {
+        negotiationId: negotiation.id,
+        content: initialMessage,
+        senderId: buyerId,
+      },
     })
-
-    // Criar sessão de chat persistente
-    createChatSession({
-      type: 'negotiation',
-      referenceId: negotiation.id,
-      clientId: `client-${normalizedPhone}`,
-      clientName: customerName || 'Cliente',
-      clientPhone: normalizedPhone,
-      vehicleName: car.name,
-      vehiclePrice: car.price,
-      status: 'waiting_response',
-    })
-
-    // Atualizar sessão com a mensagem inicial
-    onMessageSent('negotiation', negotiation.id, msg, true)
 
     console.log('✅ Negociação criada:', negotiation.id)
 
@@ -87,8 +88,11 @@ export async function POST(request: Request) {
       isNew: true,
       message: 'Negociação criada com sucesso',
     }, { status: 201 })
-  } catch (error) {
-    console.error('Erro ao criar/reutilizar negociação:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao criar/reutilizar negociação:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
     return NextResponse.json(
       { error: 'Erro ao criar negociação' },
       { status: 500 }

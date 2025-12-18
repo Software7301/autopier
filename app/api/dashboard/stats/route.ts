@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server'
-import { getOrders, getNegotiations } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { OrderStatus, NegotiationStatus } from '@prisma/client'
 
-export async function GET() {
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
   try {
-    const orders = getOrders()
-    const negotiations = getNegotiations()
-
     // Data atual considerando fuso horário de São Paulo (Brasil)
-    // Isso garante que a virada de mês/semana siga o horário local da concessionária
     const now = new Date(
       new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     )
@@ -16,21 +17,30 @@ export async function GET() {
     startOfWeek.setDate(now.getDate() - now.getDay())
     startOfWeek.setHours(0, 0, 0, 0)
 
+    // Buscar todos os pedidos e negociações
+    const [orders, negotiations] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          createdAt: { gte: startOfMonth },
+        },
+      }),
+      prisma.negotiation.findMany(),
+    ])
+
     // Filtrar pedidos do mês e da semana
-    const ordersThisMonth = orders.filter(o => 
-      new Date(o.createdAt) >= startOfMonth && o.status === 'COMPLETED'
+    const ordersThisMonth = orders.filter(
+      o => o.status === OrderStatus.COMPLETED
     )
-    const ordersThisWeek = orders.filter(o => 
-      new Date(o.createdAt) >= startOfWeek && o.status === 'COMPLETED'
+    const ordersThisWeek = orders.filter(
+      o => new Date(o.createdAt) >= startOfWeek && o.status === OrderStatus.COMPLETED
     )
 
     // Contar pedidos por status (apenas do mês atual)
-    const pendingOrders = orders.filter(o => 
-      new Date(o.createdAt) >= startOfMonth && 
-      (o.status === 'PENDING' || o.status === 'PROCESSING')
+    const pendingOrders = orders.filter(
+      o => o.status === OrderStatus.PENDING || o.status === OrderStatus.PROCESSING
     ).length
-    const completedOrders = orders.filter(o => 
-      new Date(o.createdAt) >= startOfMonth && o.status === 'COMPLETED'
+    const completedOrders = orders.filter(
+      o => o.status === OrderStatus.COMPLETED
     ).length
 
     // Calcular métricas
@@ -49,7 +59,7 @@ export async function GET() {
       
       const monthOrders = orders.filter(o => {
         const date = new Date(o.createdAt)
-        return date >= monthStart && date <= monthEnd && o.status === 'COMPLETED'
+        return date >= monthStart && date <= monthEnd && o.status === OrderStatus.COMPLETED
       })
 
       salesByMonth.push({
@@ -61,18 +71,10 @@ export async function GET() {
 
     // Status dos pedidos (apenas do mês atual)
     const statusCounts = {
-      PENDING: orders.filter(o => 
-        new Date(o.createdAt) >= startOfMonth && o.status === 'PENDING'
-      ).length,
-      PROCESSING: orders.filter(o => 
-        new Date(o.createdAt) >= startOfMonth && o.status === 'PROCESSING'
-      ).length,
-      COMPLETED: orders.filter(o => 
-        new Date(o.createdAt) >= startOfMonth && o.status === 'COMPLETED'
-      ).length,
-      CANCELLED: orders.filter(o => 
-        new Date(o.createdAt) >= startOfMonth && o.status === 'CANCELLED'
-      ).length,
+      PENDING: orders.filter(o => o.status === OrderStatus.PENDING).length,
+      PROCESSING: orders.filter(o => o.status === OrderStatus.PROCESSING).length,
+      COMPLETED: orders.filter(o => o.status === OrderStatus.COMPLETED).length,
+      CANCELLED: orders.filter(o => o.status === OrderStatus.CANCELLED).length,
     }
 
     const statusPedidos = [
@@ -89,6 +91,11 @@ export async function GET() {
       return { mes: m.mes, faturamento: acumulado }
     })
 
+    // Negociações ativas
+    const negociacoesAtivas = negotiations.filter(
+      n => n.status !== NegotiationStatus.CLOSED && n.status !== NegotiationStatus.REJECTED
+    ).length
+
     return NextResponse.json({
       stats: {
         vendasMes,
@@ -97,7 +104,7 @@ export async function GET() {
         ticketMedio,
         pedidosPendentes: pendingOrders,
         pedidosConcluidos: completedOrders,
-        negociacoesAtivas: negotiations.filter(n => n.status !== 'COMPLETED').length,
+        negociacoesAtivas,
       },
       charts: {
         salesByMonth,
@@ -105,8 +112,20 @@ export async function GET() {
         faturamentoAcumulado,
       },
     })
-  } catch (error) {
-    console.error('Erro ao buscar stats:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar stats:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
+      console.warn('⚠️ Banco indisponível. Retornando dados vazios.')
+    }
     
     return NextResponse.json({
       stats: {

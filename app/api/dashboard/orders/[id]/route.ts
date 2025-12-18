@@ -1,22 +1,36 @@
-import { NextResponse } from 'next/server'
-import { getOrderById, updateOrder, getCarById } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { OrderStatus, PaymentMethod } from '@prisma/client'
 
-function formatPaymentMethod(method: string): string {
-  const methods: Record<string, string> = {
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+function formatPaymentMethod(method: PaymentMethod): string {
+  const methods: Record<PaymentMethod, string> = {
     PIX: 'Pix',
     DINHEIRO: 'Dinheiro',
     CARTAO_CREDITO: 'Cartão de Crédito',
+    CARTAO_DEBITO: 'Cartão de Débito',
+    FINANCIAMENTO: 'Financiamento',
+    OUTROS: 'Outros',
   }
   return methods[method] || method
 }
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const order = getOrderById(id)
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        car: true,
+      },
+    })
 
     if (!order) {
       return NextResponse.json(
@@ -24,8 +38,6 @@ export async function GET(
         { status: 404 }
       )
     }
-
-    const car = getCarById(order.carId)
 
     const formattedOrder = {
       id: order.id,
@@ -35,9 +47,9 @@ export async function GET(
         rg: order.customerRg,
       },
       veiculo: {
-        id: car.id,
-        nome: car.name,
-        ano: car.year,
+        id: order.car.id,
+        nome: order.car.name,
+        ano: order.car.year,
         cor: order.selectedColor || 'Não especificada',
       },
       pagamento: {
@@ -50,16 +62,19 @@ export async function GET(
             : order.totalPrice,
       },
       status: order.status,
-      dataPedido: order.createdAt,
+      dataPedido: order.createdAt.toISOString(),
       entrega: {
-        data: order.deliveryDate || null,
-        observacoes: order.deliveryNotes || '',
+        data: null, // Campo não existe no schema Prisma
+        observacoes: '',
       },
     }
 
     return NextResponse.json(formattedOrder)
-  } catch (error) {
-    console.error('Erro ao buscar pedido:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar pedido:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
     return NextResponse.json(
       { error: 'Erro ao buscar pedido' },
       { status: 500 }
@@ -69,38 +84,49 @@ export async function GET(
 
 // PATCH - Atualizar status do pedido
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const body = await request.json()
 
-    const { status, deliveryDate, deliveryNotes } = body
+    const { status } = body
 
-    const updateData: any = {}
-    if (typeof status === 'string') {
-      updateData.status = status
-    }
-    if (typeof deliveryDate === 'string') {
-      updateData.deliveryDate = deliveryDate
-    }
-    if (typeof deliveryNotes === 'string') {
-      updateData.deliveryNotes = deliveryNotes
-    }
-
-    const order = updateOrder(id, updateData)
-
-    if (!order) {
+    // Validar status se fornecido
+    if (status && !Object.values(OrderStatus).includes(status)) {
       return NextResponse.json(
-        { error: 'Pedido não encontrado' },
-        { status: 404 },
+        { error: 'Status inválido' },
+        { status: 400 }
       )
     }
 
+    const updateData: any = {}
+    if (status) {
+      updateData.status = status as OrderStatus
+    }
+
+    const order = await prisma.order.update({
+      where: { id },
+      data: updateData,
+      include: {
+        car: true,
+      },
+    })
+
     return NextResponse.json(order)
-  } catch (error) {
-    console.error('Erro ao atualizar pedido:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar pedido:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Pedido não encontrado' },
+        { status: 404 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Erro ao atualizar pedido' },
       { status: 500 }

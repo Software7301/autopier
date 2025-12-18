@@ -1,13 +1,32 @@
-import { NextResponse } from 'next/server'
-import { getNegotiationById, updateNegotiation, getMessagesByNegotiationId, getCarById } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { NegotiationStatus } from '@prisma/client'
+
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const negotiation = getNegotiationById(id)
+
+    const negotiation = await prisma.negotiation.findUnique({
+      where: { id },
+      include: {
+        car: true,
+        buyer: true,
+        seller: true,
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            sender: true,
+          },
+        },
+      },
+    })
 
     if (!negotiation) {
       return NextResponse.json(
@@ -16,39 +35,47 @@ export async function GET(
       )
     }
 
-    const car = getCarById(negotiation.carId)
-    const messages = getMessagesByNegotiationId(id)
-
     const formattedNegotiation = {
       id: negotiation.id,
       cliente: {
-        id: negotiation.id,
-        nome: negotiation.customerName,
-        telefone: negotiation.customerPhone,
-        email: negotiation.customerEmail,
+        id: negotiation.buyer.id,
+        nome: negotiation.buyer.name,
+        telefone: negotiation.buyer.phone || '',
+        email: negotiation.buyer.email,
       },
-      veiculo: {
-        id: car.id,
-        nome: car.name,
-        ano: car.year,
-        preco: car.price,
-        imageUrl: car.imageUrl,
-      },
+      veiculo: negotiation.car
+        ? {
+            id: negotiation.car.id,
+            nome: negotiation.car.name,
+            ano: negotiation.car.year,
+            preco: negotiation.car.price,
+            imageUrl: negotiation.car.imageUrl,
+          }
+        : {
+            id: '',
+            nome: negotiation.vehicleName || 'Veículo não especificado',
+            ano: negotiation.vehicleYear || null,
+            preco: negotiation.proposedPrice || 0,
+            imageUrl: '',
+          },
       tipo: negotiation.type,
       status: negotiation.status,
-      criadoEm: negotiation.createdAt,
-      mensagens: messages.map((msg) => ({
+      criadoEm: negotiation.createdAt.toISOString(),
+      mensagens: negotiation.messages.map((msg) => ({
         id: msg.id,
         content: msg.content,
-        sender: msg.sender,
-        senderName: msg.senderName,
-        createdAt: msg.createdAt,
+        sender: msg.sender.role === 'CUSTOMER' ? 'cliente' : 'funcionario',
+        senderName: msg.sender.name,
+        createdAt: msg.createdAt.toISOString(),
       })),
     }
 
     return NextResponse.json(formattedNegotiation)
-  } catch (error) {
-    console.error('Erro ao buscar negociação:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar negociação:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
     return NextResponse.json(
       { error: 'Erro ao buscar negociação' },
       { status: 500 }
@@ -58,7 +85,7 @@ export async function GET(
 
 // PATCH - Atualizar status da negociação
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -66,18 +93,36 @@ export async function PATCH(
     const body = await request.json()
     const { status } = body
 
-    const negotiation = updateNegotiation(id, { status })
+    if (!status || !Object.values(NegotiationStatus).includes(status)) {
+      return NextResponse.json(
+        { error: 'Status inválido' },
+        { status: 400 }
+      )
+    }
 
-    if (!negotiation) {
+    const negotiation = await prisma.negotiation.update({
+      where: { id },
+      data: { status: status as NegotiationStatus },
+      include: {
+        car: true,
+        buyer: true,
+        seller: true,
+      },
+    })
+
+    return NextResponse.json(negotiation)
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar negociação:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Negociação não encontrada' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json(negotiation)
-  } catch (error) {
-    console.error('Erro ao atualizar negociação:', error)
     return NextResponse.json(
       { error: 'Erro ao atualizar negociação' },
       { status: 500 }

@@ -1,11 +1,17 @@
-import { NextResponse } from 'next/server'
-import { getNegotiationById, updateNegotiation, getMessagesByNegotiationId, createMessage, onMessageSent } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { NegotiationStatus } from '@prisma/client'
+import { getOrCreateSeller, getOrCreateBuyer } from '@/lib/users'
+
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // POST - Enviar mensagem
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { negotiationId, senderId, senderName, content, sender } = body
+    const { negotiationId, senderId, senderName, content, sender, phone } = body
 
     // Validação básica
     if (!negotiationId || !content) {
@@ -16,7 +22,12 @@ export async function POST(request: Request) {
     }
 
     // Verificar se a negociação existe
-    const negotiation = getNegotiationById(negotiationId)
+    const negotiation = await prisma.negotiation.findUnique({
+      where: { id: negotiationId },
+      include: {
+        buyer: true,
+      },
+    })
 
     if (!negotiation) {
       return NextResponse.json(
@@ -28,36 +39,56 @@ export async function POST(request: Request) {
     // Determinar se é cliente ou funcionário
     const isEmployee = sender === 'funcionario' || senderId === 'seller-autopier'
     
-    // Criar mensagem
-    const message = createMessage({
-      negotiationId,
-      content: content.trim(),
-      sender: isEmployee ? 'funcionario' : 'cliente',
-      senderName: senderName || (isEmployee ? 'AutoPier' : negotiation.customerName),
-    })
-
-    // Atualizar status da negociação para IN_PROGRESS se estiver PENDING
-    if (negotiation.status === 'PENDING') {
-      updateNegotiation(negotiationId, { status: 'IN_PROGRESS' })
+    // Obter senderId correto
+    let finalSenderId: string
+    if (isEmployee) {
+      finalSenderId = await getOrCreateSeller()
+    } else {
+      // Se é cliente, usar o buyerId da negociação ou criar/buscar pelo telefone
+      if (phone) {
+        finalSenderId = await getOrCreateBuyer(phone, senderName || negotiation.buyer.name)
+      } else {
+        finalSenderId = negotiation.buyerId
+      }
     }
 
-    // Atualizar sessão de chat (persistência)
-    onMessageSent('negotiation', negotiationId, message, !isEmployee)
+    // Criar mensagem
+    const message = await prisma.message.create({
+      data: {
+        negotiationId,
+        content: content.trim(),
+        senderId: finalSenderId,
+      },
+      include: {
+        sender: true,
+      },
+    })
+
+    // Atualizar status da negociação para IN_PROGRESS se estiver OPEN
+    if (negotiation.status === NegotiationStatus.OPEN) {
+      await prisma.negotiation.update({
+        where: { id: negotiationId },
+        data: { status: NegotiationStatus.IN_PROGRESS },
+      })
+    }
 
     console.log('✅ Mensagem enviada via chat:', message.id)
 
     return NextResponse.json({
       id: message.id,
       content: message.content,
-      createdAt: message.createdAt,
+      createdAt: message.createdAt.toISOString(),
       sender: {
-        id: isEmployee ? 'seller-autopier' : 'buyer-' + negotiationId,
-        name: message.senderName,
-        role: isEmployee ? 'DEALER' : 'CUSTOMER',
+        id: message.sender.id,
+        name: message.sender.name,
+        role: message.sender.role,
       },
     }, { status: 201 })
-  } catch (error) {
-    console.error('Erro ao enviar mensagem:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao enviar mensagem:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
     return NextResponse.json(
       { error: 'Erro ao enviar mensagem' },
       { status: 500 }
@@ -65,13 +96,10 @@ export async function POST(request: Request) {
   }
 }
 
-// Forçar renderização dinâmica (usa request.url)
-export const dynamic = 'force-dynamic'
-
 // GET - Buscar mensagens de uma negociação
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const searchParams = request.nextUrl.searchParams
     const negotiationId = searchParams.get('negotiationId')
 
     if (!negotiationId) {
@@ -81,23 +109,56 @@ export async function GET(request: Request) {
       )
     }
 
-    const negotiation = getNegotiationById(negotiationId)
-    const messages = getMessagesByNegotiationId(negotiationId)
+    const negotiation = await prisma.negotiation.findUnique({
+      where: { id: negotiationId },
+    })
+
+    if (!negotiation) {
+      return NextResponse.json(
+        { error: 'Negociação não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { negotiationId },
+      include: {
+        sender: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
 
     const formattedMessages = messages.map(msg => ({
       id: msg.id,
       content: msg.content,
-      createdAt: msg.createdAt,
+      createdAt: msg.createdAt.toISOString(),
       sender: {
-        id: msg.sender === 'funcionario' ? 'seller-autopier' : 'buyer-' + negotiationId,
-        name: msg.senderName,
-        role: msg.sender === 'funcionario' ? 'DEALER' : 'CUSTOMER',
+        id: msg.sender.id,
+        name: msg.sender.name,
+        role: msg.sender.role,
       },
     }))
 
     return NextResponse.json(formattedMessages)
-  } catch (error) {
-    console.error('Erro ao buscar mensagens:', error)
-    return NextResponse.json([])
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar mensagens:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
+      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    return NextResponse.json(
+      { error: 'Erro ao buscar mensagens' },
+      { status: 500 }
+    )
   }
 }

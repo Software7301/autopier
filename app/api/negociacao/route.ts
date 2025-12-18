@@ -1,8 +1,14 @@
-import { NextResponse } from 'next/server'
-import { createNegotiation, getNegotiations, createMessage, getCarById, createChatSession, onMessageSent } from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { NegotiationType, NegotiationStatus } from '@prisma/client'
+import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
+
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // POST - Criar nova negociação
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
@@ -30,43 +36,55 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validar tipo
+    const negotiationType = (type === 'VENDA' || type === 'SELL') 
+      ? NegotiationType.SELL 
+      : NegotiationType.BUY
+
+    // Obter ou criar buyer e seller
+    const buyerId = await getOrCreateBuyer(customerPhone, customerName, customerEmail)
+    const sellerId = await getOrCreateSeller()
+
+    // Verificar se carId existe (se fornecido)
+    if (carId) {
+      const car = await prisma.car.findUnique({ where: { id: carId } })
+      if (!car) {
+        return NextResponse.json(
+          { error: 'Veículo não encontrado' },
+          { status: 404 }
+        )
+      }
+    }
+
     // Criar negociação
-    const negotiation = createNegotiation({
-      carId: carId || 'generic',
-      customerName,
-      customerPhone,
-      customerEmail: customerEmail || '',
-      type: type || 'COMPRA',
-      status: 'PENDING',
+    const negotiation = await prisma.negotiation.create({
+      data: {
+        type: negotiationType,
+        carId: carId || null,
+        buyerId,
+        sellerId,
+        status: NegotiationStatus.OPEN,
+        vehicleName: vehicleName || null,
+        vehicleBrand: vehicleBrand || null,
+        vehicleYear: vehicleYear ? parseInt(vehicleYear) : null,
+        vehicleMileage: vehicleMileage ? parseInt(vehicleMileage) : null,
+        vehicleDescription: vehicleDescription || null,
+        proposedPrice: proposedPrice ? parseFloat(proposedPrice) : null,
+      },
     })
 
     // Criar mensagem inicial
-    const initialMessage = type === 'VENDA'
+    const initialMessage = negotiationType === NegotiationType.SELL
       ? `Olá! Gostaria de vender meu veículo: ${vehicleBrand} ${vehicleName} ${vehicleYear}. Quilometragem: ${vehicleMileage} km. Valor pretendido: R$ ${proposedPrice?.toLocaleString('pt-BR') || 'A combinar'}. ${vehicleDescription || ''}`
       : message || `Olá! Tenho interesse em negociar. ${vehicleInterest || ''}`
 
-    const msg = createMessage({
-      negotiationId: negotiation.id,
-      content: initialMessage,
-      sender: 'cliente',
-      senderName: customerName,
+    await prisma.message.create({
+      data: {
+        negotiationId: negotiation.id,
+        content: initialMessage,
+        senderId: buyerId,
+      },
     })
-
-    // Criar sessão de chat persistente
-    const car = getCarById(carId || 'generic')
-    createChatSession({
-      type: 'negotiation',
-      referenceId: negotiation.id,
-      clientId: `client-${customerPhone.replace(/\D/g, '')}`,
-      clientName: customerName,
-      clientPhone: customerPhone,
-      vehicleName: type === 'SELL' ? `${vehicleBrand} ${vehicleName}` : car.name,
-      vehiclePrice: type === 'SELL' ? (proposedPrice || 0) : car.price,
-      status: 'waiting_response',
-    })
-
-    // Atualizar sessão com a mensagem inicial
-    onMessageSent('negotiation', negotiation.id, msg, true)
 
     console.log('✅ Negociação criada:', negotiation.id)
 
@@ -75,8 +93,11 @@ export async function POST(request: Request) {
       message: 'Negociação criada com sucesso',
       status: negotiation.status,
     }, { status: 201 })
-  } catch (error) {
-    console.error('Erro ao criar negociação:', error)
+  } catch (error: any) {
+    console.error('❌ Erro ao criar negociação:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
     return NextResponse.json(
       { error: 'Erro ao criar negociação' },
       { status: 500 }
@@ -85,21 +106,57 @@ export async function POST(request: Request) {
 }
 
 // GET - Listar negociações
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const negotiations = getNegotiations()
-    
-    const formattedNegotiations = negotiations.map(neg => {
-      const car = getCarById(neg.carId)
-      return {
-        ...neg,
-        car,
-      }
+    const negotiations = await prisma.negotiation.findMany({
+      include: {
+        car: true,
+        buyer: true,
+        seller: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
+    
+    const formattedNegotiations = negotiations.map(neg => ({
+      id: neg.id,
+      type: neg.type,
+      status: neg.status,
+      carId: neg.carId,
+      buyerId: neg.buyerId,
+      sellerId: neg.sellerId,
+      vehicleName: neg.vehicleName,
+      vehicleBrand: neg.vehicleBrand,
+      vehicleYear: neg.vehicleYear,
+      vehicleMileage: neg.vehicleMileage,
+      vehicleDescription: neg.vehicleDescription,
+      proposedPrice: neg.proposedPrice,
+      createdAt: neg.createdAt.toISOString(),
+      updatedAt: neg.updatedAt.toISOString(),
+      car: neg.car,
+    }))
 
     return NextResponse.json(formattedNegotiations)
-  } catch (error) {
-    console.error('Erro ao buscar negociações:', error)
-    return NextResponse.json([])
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar negociações:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
+      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    return NextResponse.json(
+      { error: 'Erro ao buscar negociações' },
+      { status: 500 }
+    )
   }
 }

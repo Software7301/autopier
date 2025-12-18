@@ -1,57 +1,48 @@
-import { NextResponse } from 'next/server'
-import {
-  getNegotiations,
-  getMessagesByNegotiationId,
-  getCarById,
-  getChatSessionByReference
-} from '@/lib/storage'
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { NegotiationStatus, NegotiationType, CarCategory } from '@prisma/client'
 
-// ✅ Tipagem do carro com category opcional
-type Car = {
-  id: string
-  name: string
-  brand: string
-  model?: string
-  year: number
-  price?: number
-  imageUrl?: string
-  category?: string // ✅ CORREÇÃO AQUI
-}
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // GET - Buscar negociações ativas para exibir na home
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const negotiations = getNegotiations()
-
     // Filtrar apenas negociações ativas
-    const activeNegotiations = negotiations.filter(neg => {
-      const status = neg.status?.toUpperCase()
-      return (
-        status === 'PENDING' ||
-        status === 'OPEN' ||
-        status === 'IN_PROGRESS' ||
-        (status !== 'CLOSED' &&
-          status !== 'REJECTED' &&
-          status !== 'COMPLETED' &&
-          status !== 'ACCEPTED')
-      )
+    const negotiations = await prisma.negotiation.findMany({
+      where: {
+        status: {
+          in: [NegotiationStatus.OPEN, NegotiationStatus.IN_PROGRESS],
+        },
+      },
+      include: {
+        car: true,
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            sender: true,
+          },
+        },
+        buyer: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 6,
     })
 
-    const formattedNegotiations = activeNegotiations.map((neg) => {
-      // ✅ Cast seguro do carro
-      const car = getCarById(neg.carId || 'generic') as Car
+    const formattedNegotiations = negotiations.map((neg) => {
+      const lastMessage = neg.messages[0]
 
-      const messages = getMessagesByNegotiationId(neg.id)
-      const lastMessage = messages[messages.length - 1]
-      getChatSessionByReference('negotiation', neg.id)
-
-      // Contar interessados
-      const uniqueClients = new Set(
-        messages
-          .filter(m => m.sender === 'cliente')
-          .map(m => m.senderName)
+      // Contar interessados (número de mensagens de clientes diferentes)
+      const uniqueBuyers = new Set(
+        neg.messages
+          .filter(m => m.sender.role === 'CUSTOMER')
+          .map(m => m.senderId)
       )
-      const interessados = uniqueClients.size || 1
+      const interessados = uniqueBuyers.size || 1
 
       // Calcular última atividade
       const lastActivity = lastMessage?.createdAt || neg.updatedAt || neg.createdAt
@@ -72,52 +63,47 @@ export async function GET() {
         lastActivityText = `há ${days} dia${days > 1 ? 's' : ''}`
       }
 
-      // ✅ Determinar categoria do veículo (SEM erro TS agora)
-      let category = 'SUV'
-
-      if (car.category) {
-        category = car.category
+      // Determinar categoria do veículo
+      let category: CarCategory = CarCategory.SUV
+      if (neg.car) {
+        category = neg.car.category
       } else {
-        const name = (neg.vehicleName || car.name || '').toLowerCase()
-
+        const name = (neg.vehicleName || '').toLowerCase()
         if (name.includes('sedan') || name.includes('civic') || name.includes('corolla')) {
-          category = 'SEDAN'
+          category = CarCategory.SEDAN
         } else if (name.includes('compacto') || name.includes('onix') || name.includes('hb20')) {
-          category = 'COMPACTO'
+          category = CarCategory.COMPACTO
         } else if (name.includes('esportivo') || name.includes('bmw') || name.includes('mercedes')) {
-          category = 'ESPORTIVO'
+          category = CarCategory.ESPORTIVO
         }
       }
 
       const altaProcura = interessados > 2 || diffMinutes < 10
 
-      const isVenda =
-        neg.type?.toUpperCase() === 'VENDA' ||
-        neg.type?.toUpperCase() === 'SELL'
+      const isVenda = neg.type === NegotiationType.SELL
 
-      const veiculoNome =
-        isVenda
-          ? `${neg.vehicleBrand || ''} ${neg.vehicleName || ''}`.trim() || car.name
-          : car.name
+      const veiculoNome = isVenda
+        ? `${neg.vehicleBrand || ''} ${neg.vehicleName || ''}`.trim() || (neg.car?.name || 'Veículo não especificado')
+        : (neg.car?.name || neg.vehicleName || 'Veículo não especificado')
 
       return {
         id: neg.id,
         veiculo: {
           nome: veiculoNome,
-          marca: isVenda ? (neg.vehicleBrand || car.brand) : car.brand,
-          modelo: isVenda ? (neg.vehicleName || car.model) : car.model,
+          marca: isVenda ? (neg.vehicleBrand || neg.car?.brand || '') : (neg.car?.brand || ''),
+          modelo: isVenda ? (neg.vehicleName || neg.car?.model || '') : (neg.car?.model || ''),
           categoria: category,
           imagem:
-            car.imageUrl ||
+            neg.car?.imageUrl ||
             'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800',
-          ano: isVenda ? (neg.vehicleYear || car.year) : car.year
+          ano: isVenda ? (neg.vehicleYear || neg.car?.year || null) : (neg.car?.year || null),
         },
         status: 'Em negociação',
         interessados,
         ultimaAtividade: lastActivityText,
         altaProcura,
         tipo: neg.type,
-        createdAt: neg.createdAt
+        createdAt: neg.createdAt.toISOString(),
       }
     })
 
@@ -131,9 +117,26 @@ export async function GET() {
       return dateDiff
     })
 
-    return NextResponse.json(formattedNegotiations.slice(0, 6))
-  } catch (error) {
-    console.error('Erro ao buscar negociações ativas:', error)
-    return NextResponse.json([])
+    return NextResponse.json(formattedNegotiations)
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar negociações ativas:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.name === 'PrismaClientInitializationError'
+    ) {
+      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    return NextResponse.json(
+      { error: 'Erro ao buscar negociações ativas' },
+      { status: 500 }
+    )
   }
 }
