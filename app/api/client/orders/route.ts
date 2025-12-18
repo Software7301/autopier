@@ -12,10 +12,8 @@ export async function GET(request: NextRequest) {
     const phone = searchParams.get('phone')
 
     if (!phone) {
-      return NextResponse.json(
-        { error: 'Telefone é obrigatório' },
-        { status: 400 }
-      )
+      // ⚠️ SEMPRE retornar array, mesmo sem telefone
+      return NextResponse.json([])
     }
 
     const normalizedPhone = phone.replace(/\D/g, '')
@@ -67,10 +65,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar pedidos do cliente' },
-      { status: 500 }
-    )
+    // ⚠️ SEMPRE retornar array, mesmo em erro, para não quebrar o frontend
+    console.warn('⚠️ Erro ao buscar pedidos. Retornando array vazio.')
+    return NextResponse.json([])
   }
 }
 

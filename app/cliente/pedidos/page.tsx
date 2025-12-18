@@ -4,28 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
-  MessageCircle, 
   ShoppingCart, 
   User, 
   Phone,
   ArrowRight,
-  Clock,
-  CheckCircle,
-  Loader2
+  Loader2,
+  MessageCircle
 } from 'lucide-react'
-
-interface Negotiation {
-  id: string
-  carName: string
-  carBrand: string
-  carImage: string
-  status: string
-  createdAt: string
-  updatedAt: string
-  lastMessage: string
-  lastMessageAt: string
-  unreadCount: number
-}
 
 interface Order {
   id: string
@@ -46,10 +31,6 @@ interface Order {
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Aguardando', color: 'text-yellow-400' },
   IN_PROGRESS: { label: 'Em Andamento', color: 'text-blue-400' },
-  OPEN: { label: 'Aberta', color: 'text-blue-400' },
-  ACCEPTED: { label: 'Aceita', color: 'text-green-400' },
-  REJECTED: { label: 'Rejeitada', color: 'text-red-400' },
-  CLOSED: { label: 'Fechada', color: 'text-gray-400' },
   CONFIRMED: { label: 'Confirmado', color: 'text-green-400' },
   PROCESSING: { label: 'Em Processamento', color: 'text-blue-400' },
   COMPLETED: { label: 'Finalizado', color: 'text-green-400' },
@@ -72,12 +53,11 @@ function formatDate(date: string): string {
   })
 }
 
-export default function ClientePage() {
+export default function ClientePedidosPage() {
   const router = useRouter()
   const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
-  const [negotiations, setNegotiations] = useState<Negotiation[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingData, setLoadingData] = useState(false)
 
@@ -98,19 +78,14 @@ export default function ClientePage() {
   async function loadData(phoneNumber: string) {
     setLoadingData(true)
     try {
-      const [negResponse, ordersResponse] = await Promise.all([
-        fetch(`/api/client/negotiations?phone=${phoneNumber}`),
-        fetch(`/api/client/orders?phone=${phoneNumber}`),
-      ])
-      
-      const negData = await negResponse.json()
+      const ordersResponse = await fetch(`/api/client/orders?phone=${phoneNumber}`)
       const ordersData = await ordersResponse.json()
       
-      // ⚠️ PROTEÇÃO: Sempre garantir que são arrays
-      setNegotiations(Array.isArray(negData) ? negData : [])
+      // ⚠️ PROTEÇÃO: Sempre garantir que é array
       setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {
-      console.error('Erro ao carregar dados:', error)
+      console.error('Erro ao carregar pedidos:', error)
+      setOrders([])
     } finally {
       setLoadingData(false)
       setLoading(false)
@@ -155,10 +130,10 @@ export default function ClientePage() {
                 <User className="w-8 h-8 text-primary" />
               </div>
               <h1 className="text-2xl font-display font-bold text-white mb-2">
-                Acesse Suas Negociações
+                Acesse Seus Pedidos
               </h1>
               <p className="text-text-secondary">
-                Digite seu telefone para ver suas negociações e pedidos
+                Digite seu telefone para ver seus pedidos
               </p>
             </div>
 
@@ -210,132 +185,69 @@ export default function ClientePage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-display font-bold text-white">
-                Área do <span className="text-gradient">Cliente</span>
+                Meus <span className="text-gradient">Pedidos</span>
               </h1>
               <p className="text-text-secondary mt-2">
-                Olá, {name}! Acompanhe suas negociações e pedidos
+                Olá, {name}! Acompanhe seus pedidos
               </p>
             </div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('autopier_user_phone')
-                localStorage.removeItem('autopier_user_name')
-                setPhone('')
-                setName('')
-                setNegotiations([])
-                setOrders([])
-              }}
-              className="btn-secondary"
-            >
-              Sair
-            </button>
+            <div className="flex gap-3">
+              <Link href="/cliente" className="btn-secondary">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Negociações
+              </Link>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('autopier_user_phone')
+                  localStorage.removeItem('autopier_user_name')
+                  setPhone('')
+                  setName('')
+                  setOrders([])
+                }}
+                className="btn-secondary"
+              >
+                Sair
+              </button>
+            </div>
           </div>
         </div>
 
         {loadingData ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-            <p className="text-text-secondary mt-4">Carregando...</p>
+            <p className="text-text-secondary mt-4">Carregando pedidos...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Negociações */}
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
-                  <MessageCircle className="w-6 h-6 text-primary" />
-                  Minhas Negociações
-                </h2>
-                <Link href="/cars" className="text-primary hover:text-primary/80 text-sm">
-                  Ver veículos
-                </Link>
-              </div>
-
-              {negotiations.length === 0 ? (
-                <div className="card-static p-8 text-center">
-                  <MessageCircle className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <p className="text-text-secondary mb-4">Você ainda não tem negociações</p>
-                  <Link href="/cars" className="btn-primary inline-block">
-                    Ver Veículos
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {negotiations.map((neg) => {
-                    const status = statusLabels[neg.status] || { label: neg.status, color: 'text-gray-400' }
-                    return (
-                      <div key={neg.id} className="card-static p-5 hover:border-primary/50 transition-colors">
-                        <div className="flex items-start gap-4">
-                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-                            <img 
-                              src={neg.carImage} 
-                              alt={neg.carName}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <h3 className="font-semibold text-white truncate">
-                                  {neg.carBrand} {neg.carName}
-                                </h3>
-                                <p className={`text-sm ${status.color}`}>
-                                  {status.label}
-                                </p>
-                              </div>
-                              {neg.unreadCount > 0 && (
-                                <span className="bg-accent text-white text-xs font-bold px-2 py-1 rounded-full">
-                                  {neg.unreadCount}
-                                </span>
-                              )}
-                            </div>
-                            
-                            {neg.lastMessage && (
-                              <p className="text-text-muted text-sm truncate mb-2">
-                                {neg.lastMessage}
-                              </p>
-                            )}
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-text-muted text-xs">
-                                {formatDate(neg.updatedAt)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <ShoppingCart className="w-6 h-6 text-accent" />
+                Pedidos ({orders.length})
+              </h2>
+              <Link href="/cars" className="text-primary hover:text-primary/80 text-sm">
+                Ver veículos
+              </Link>
             </div>
 
-            {/* Pedidos */}
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
-                  <ShoppingCart className="w-6 h-6 text-accent" />
-                  Meus Pedidos
-                </h2>
-                <Link href="/cars" className="text-primary hover:text-primary/80 text-sm">
-                  Ver veículos
+            {!Array.isArray(orders) || orders.length === 0 ? (
+              <div className="card-static p-8 text-center">
+                <ShoppingCart className="w-12 h-12 text-text-muted mx-auto mb-4" />
+                <p className="text-text-secondary mb-4">Você ainda não tem pedidos</p>
+                <Link href="/cars" className="btn-primary inline-block">
+                  Ver Veículos
                 </Link>
               </div>
-
-              {orders.length === 0 ? (
-                <div className="card-static p-8 text-center">
-                  <ShoppingCart className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <p className="text-text-secondary mb-4">Você ainda não tem pedidos</p>
-                  <Link href="/cars" className="btn-primary inline-block">
-                    Ver Veículos
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {orders.map((order) => {
-                    const status = statusLabels[order.status] || { label: order.status, color: 'text-gray-400' }
-                    return (
-                      <div key={order.id} className="card-static p-5 hover:border-primary/50 transition-colors">
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => {
+                  const status = statusLabels[order.status] || { label: order.status, color: 'text-gray-400' }
+                  return (
+                    <Link 
+                      key={order.id} 
+                      href={`/pedido/${order.id}/chat`}
+                      className="block"
+                    >
+                      <div className="card-static p-5 hover:border-primary/50 transition-colors cursor-pointer">
                         <div className="flex items-start gap-4">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface flex-shrink-0">
                             <img 
@@ -380,20 +292,20 @@ export default function ClientePage() {
                               <span className="text-text-muted text-xs">
                                 {formatDate(order.updatedAt)}
                               </span>
+                              <ArrowRight className="w-4 h-4 text-text-muted" />
                             </div>
                           </div>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>
   )
 }
-
 
