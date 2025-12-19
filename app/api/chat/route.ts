@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { negotiationId, senderId, senderName, content, sender, phone } = body
+    const { negotiationId, senderId, senderName, content, sender, customerName } = body
 
     // Validação básica
     if (!negotiationId || !content) {
@@ -44,12 +44,20 @@ export async function POST(request: NextRequest) {
     if (isEmployee) {
       finalSenderId = await getOrCreateSeller()
     } else {
-      // Se é cliente, usar o buyerId da negociação ou criar/buscar pelo telefone
-      if (phone) {
-        finalSenderId = await getOrCreateBuyer(phone, senderName || negotiation.buyer.name)
-      } else {
-        finalSenderId = negotiation.buyerId
+      // Se é cliente, validar pelo nome
+      if (customerName) {
+        const normalizedCustomerName = customerName.trim().toLowerCase()
+        const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
+        
+        if (normalizedCustomerName !== normalizedBuyerName) {
+          return NextResponse.json(
+            { error: 'Acesso negado. Esta negociação não pertence a você.' },
+            { status: 403 }
+          )
+        }
       }
+      // Usar o buyerId da negociação
+      finalSenderId = negotiation.buyerId
     }
 
     // Criar mensagem
@@ -101,6 +109,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const negotiationId = searchParams.get('negotiationId')
+    const customerName = searchParams.get('customerName')
 
     if (!negotiationId) {
       return NextResponse.json(
@@ -111,6 +120,9 @@ export async function GET(request: NextRequest) {
 
     const negotiation = await prisma.negotiation.findUnique({
       where: { id: negotiationId },
+      include: {
+        buyer: true,
+      },
     })
 
     if (!negotiation) {
@@ -118,6 +130,19 @@ export async function GET(request: NextRequest) {
         { error: 'Negociação não encontrada' },
         { status: 404 }
       )
+    }
+
+    // Validar acesso pelo nome se fornecido
+    if (customerName) {
+      const normalizedCustomerName = customerName.trim().toLowerCase()
+      const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
+      
+      if (normalizedCustomerName !== normalizedBuyerName) {
+        return NextResponse.json(
+          { error: 'Acesso negado. Esta negociação não pertence a você.' },
+          { status: 403 }
+        )
+      }
     }
 
     const messages = await prisma.message.findMany({

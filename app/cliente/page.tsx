@@ -13,6 +13,8 @@ import {
   CheckCircle,
   Loader2
 } from 'lucide-react'
+import NameModal from '@/components/NameModal'
+import { getUserName, setUserName, hasUserName, clearUserName } from '@/lib/userName'
 
 interface Negotiation {
   id: string
@@ -74,33 +76,32 @@ function formatDate(date: string): string {
 
 export default function ClientePage() {
   const router = useRouter()
-  const [phone, setPhone] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
   const [negotiations, setNegotiations] = useState<Negotiation[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingData, setLoadingData] = useState(false)
+  const [showNameModal, setShowNameModal] = useState(false)
 
   useEffect(() => {
-    // Buscar dados do localStorage
-    const savedPhone = localStorage.getItem('autopier_user_phone')
-    const savedName = localStorage.getItem('autopier_user_name')
+    // Verificar se já existe nome salvo
+    const savedName = getUserName()
     
-    if (savedPhone && savedName) {
-      setPhone(savedPhone)
+    if (hasUserName() && savedName) {
       setName(savedName)
-      loadData(savedPhone)
+      loadData(savedName)
     } else {
+      setShowNameModal(true)
       setLoading(false)
     }
   }, [])
 
-  async function loadData(phoneNumber: string) {
+  async function loadData(customerName: string) {
     setLoadingData(true)
     try {
       const [negResponse, ordersResponse] = await Promise.all([
-        fetch(`/api/client/negotiations?phone=${phoneNumber}`),
-        fetch(`/api/client/orders?phone=${phoneNumber}`),
+        fetch(`/api/client/negotiations?customerName=${encodeURIComponent(customerName)}`),
+        fetch(`/api/client/orders?customerName=${encodeURIComponent(customerName)}`),
       ])
       
       const negData = await negResponse.json()
@@ -117,86 +118,41 @@ export default function ClientePage() {
     }
   }
 
-  function handlePhoneSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!phone || phone.replace(/\D/g, '').length < 6) {
-      alert('Digite um telefone válido')
-      return
-    }
-    
-    const normalizedPhone = phone.replace(/\D/g, '')
-    localStorage.setItem('autopier_user_phone', normalizedPhone)
-    localStorage.setItem('autopier_user_name', name || 'Cliente')
-    
-    setPhone(normalizedPhone)
-    setName(name || 'Cliente')
-    loadData(normalizedPhone)
+  function handleNameSubmit(submittedName: string) {
+    setUserName(submittedName)
+    setName(submittedName)
+    setShowNameModal(false)
+    setLoading(true)
+    loadData(submittedName)
   }
 
-  if (loading) {
+  function handleChangeName() {
+    if (confirm('Deseja realmente trocar de nome? Isso limpará seus dados locais e você precisará informar o nome novamente.')) {
+      clearUserName()
+      setName('')
+      setNegotiations([])
+      setOrders([])
+      setShowNameModal(true)
+    }
+  }
+
+  // Mostrar modal de nome se necessário
+  if (showNameModal) {
+    return (
+      <NameModal
+        isOpen={showNameModal}
+        onNameSubmit={handleNameSubmit}
+        currentName={name}
+      />
+    )
+  }
+
+  if (loading || !name) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-text-secondary">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Tela de identificação
-  if (!phone) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-12">
-        <div className="max-w-md mx-auto px-4">
-          <div className="card-static p-8 space-y-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="w-8 h-8 text-primary" />
-              </div>
-              <h1 className="text-2xl font-display font-bold text-white mb-2">
-                Acesse Suas Negociações
-              </h1>
-              <p className="text-text-secondary">
-                Digite seu telefone para ver suas negociações e pedidos
-              </p>
-            </div>
-
-            <form onSubmit={handlePhoneSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-2">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome"
-                  className="input-field"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-2">
-                  Telefone *
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Apenas números"
-                  className="input-field"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn-primary w-full">
-                Acessar
-              </button>
-            </form>
-          </div>
         </div>
       </div>
     )
@@ -217,17 +173,10 @@ export default function ClientePage() {
               </p>
             </div>
             <button
-              onClick={() => {
-                localStorage.removeItem('autopier_user_phone')
-                localStorage.removeItem('autopier_user_name')
-                setPhone('')
-                setName('')
-                setNegotiations([])
-                setOrders([])
-              }}
+              onClick={handleChangeName}
               className="btn-secondary"
             >
-              Sair
+              Trocar Nome
             </button>
           </div>
         </div>

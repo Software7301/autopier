@@ -16,6 +16,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '@/hooks/useNotifications'
 import TypingIndicator, { NotificationToast } from '@/components/TypingIndicator'
+import NameModal from '@/components/NameModal'
+import { getUserName, setUserName, hasUserName } from '@/lib/userName'
 
 interface Message {
   id: string
@@ -48,6 +50,8 @@ export default function PedidoChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [userName, setUserNameState] = useState<string | null>(null)
   
   // Estados para notificações e digitação
   const [otherUserTyping, setOtherUserTyping] = useState(false)
@@ -63,44 +67,66 @@ export default function PedidoChatPage() {
   // Hook de notificações
   const { permission, requestPermission, notifyNewMessage, playSound, isTabActive } = useNotifications()
 
-  // Buscar dados do chat
+  // Verificar nome ao carregar
   useEffect(() => {
-    async function fetchChat() {
-      try {
-        const phone = localStorage.getItem('autopier_user_phone')
-        const url = phone 
-          ? `/api/pedido/${orderId}/chat?phone=${phone}`
-          : `/api/pedido/${orderId}/chat`
-        
-        const response = await fetch(url)
-        if (response.ok) {
-          const data = await response.json()
-          setCustomerName(data.customerName || 'Cliente')
-          // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
-          const safeMessages = Array.isArray(data.messages) ? data.messages : []
-          setMessages(safeMessages)
-          prevMessagesCountRef.current = safeMessages.length
-        } else if (response.status === 403) {
-          alert('Acesso negado. Este pedido não pertence a você.')
-          window.location.href = '/cliente'
-        }
-      } catch (error) {
-        console.error('Erro ao buscar chat:', error)
-      } finally {
-        setLoading(false)
-      }
+    const name = getUserName()
+    if (!hasUserName()) {
+      setShowNameModal(true)
+      setLoading(false)
+    } else {
+      setUserNameState(name)
     }
+  }, [])
+
+  // Handler para quando o nome for informado
+  function handleNameSubmit(name: string) {
+    setUserName(name)
+    setUserNameState(name)
+    setShowNameModal(false)
+    setLoading(true)
+    // Recarregar dados após salvar o nome
     fetchChat()
-  }, [orderId])
+  }
+
+  // Buscar dados do chat
+  async function fetchChat() {
+    if (!userName) return
+    
+    try {
+      const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
+      
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        setCustomerName(data.customerName || userName)
+        // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
+        const safeMessages = Array.isArray(data.messages) ? data.messages : []
+        setMessages(safeMessages)
+        prevMessagesCountRef.current = safeMessages.length
+      } else if (response.status === 403) {
+        alert('Acesso negado. Este pedido não pertence a você.')
+        window.location.href = '/cliente'
+      }
+    } catch (error) {
+      console.error('Erro ao buscar chat:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (userName) {
+      fetchChat()
+    }
+  }, [orderId, userName])
 
   // Polling para novas mensagens + verificar digitação
   useEffect(() => {
+    if (!userName || !orderId) return
+    
     const interval = setInterval(async () => {
       try {
-        const phone = localStorage.getItem('autopier_user_phone')
-        const url = phone 
-          ? `/api/pedido/${orderId}/chat?phone=${phone}`
-          : `/api/pedido/${orderId}/chat`
+        const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
         
         // Buscar novas mensagens
         const response = await fetch(url)
@@ -152,7 +178,7 @@ export default function PedidoChatPage() {
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [orderId, messages.length, customerName, notifyNewMessage, playSound, isTabActive])
+  }, [orderId, messages.length, customerName, userName, notifyNewMessage, playSound, isTabActive])
 
   // Enviar status de digitação
   const sendTypingStatus = useCallback(async (typing: boolean) => {
@@ -225,7 +251,7 @@ export default function PedidoChatPage() {
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault()
-    if (!newMessage.trim() || sending) return
+    if (!newMessage.trim() || sending || !userName) return
 
     setSending(true)
     sendTypingStatus(false)
@@ -239,7 +265,8 @@ export default function PedidoChatPage() {
         body: JSON.stringify({
           content: messageContent,
           sender: 'cliente',
-          senderName: customerName,
+          senderName: userName,
+          customerName: userName,
         }),
       })
 
@@ -256,7 +283,17 @@ export default function PedidoChatPage() {
     }
   }
 
-  if (loading) {
+  // Mostrar modal de nome se necessário
+  if (showNameModal) {
+    return (
+      <NameModal
+        isOpen={showNameModal}
+        onNameSubmit={handleNameSubmit}
+      />
+    )
+  }
+
+  if (loading || !userName) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">

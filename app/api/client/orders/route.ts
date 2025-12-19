@@ -5,23 +5,26 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar pedidos do cliente por telefone
+// GET - Buscar pedidos do cliente por nome
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const phone = searchParams.get('phone')
+    const customerName = searchParams.get('customerName')
 
-    if (!phone) {
-      // ⚠️ SEMPRE retornar array, mesmo sem telefone
+    if (!customerName || !customerName.trim()) {
+      // ⚠️ SEMPRE retornar array, mesmo sem nome
       return NextResponse.json([])
     }
 
-    const normalizedPhone = phone.replace(/\D/g, '')
+    const normalizedName = customerName.trim()
     
-    // Buscar pedidos do cliente pelo telefone
+    // Buscar pedidos do cliente pelo nome
     const orders = await prisma.order.findMany({
       where: {
-        customerPhone: normalizedPhone,
+        customerName: {
+          equals: normalizedName,
+          mode: 'insensitive', // Case-insensitive
+        },
       },
       include: {
         car: true,

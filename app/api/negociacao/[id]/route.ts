@@ -15,7 +15,7 @@ export async function GET(
   try {
     const { id } = await params
     const searchParams = request.nextUrl.searchParams
-    const clientPhone = searchParams.get('phone') // Telefone do cliente para validação
+    const customerName = searchParams.get('customerName') // Nome do cliente para validação
     
     const negotiation = await prisma.negotiation.findUnique({
       where: { id },
@@ -39,12 +39,12 @@ export async function GET(
       )
     }
 
-    // Validação de acesso: cliente só pode acessar suas próprias negociações
-    if (clientPhone) {
-      const normalizedClientPhone = clientPhone.replace(/\D/g, '')
-      const normalizedNegPhone = negotiation.buyer.phone?.replace(/\D/g, '') || ''
+    // Validação de acesso: cliente só pode acessar suas próprias negociações pelo nome
+    if (customerName) {
+      const normalizedCustomerName = customerName.trim().toLowerCase()
+      const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
       
-      if (normalizedClientPhone !== normalizedNegPhone) {
+      if (normalizedCustomerName !== normalizedBuyerName) {
         return NextResponse.json(
           { error: 'Acesso negado. Esta negociação não pertence a você.' },
           { status: 403 }
@@ -152,11 +152,18 @@ export async function POST(
   try {
     const { id } = await params
     const body = await request.json()
-    const { content, senderName, phone } = body
+    const { content, senderName, customerName } = body
 
     if (!content || !content.trim()) {
       return NextResponse.json(
         { error: 'Mensagem não pode ser vazia' },
+        { status: 400 }
+      )
+    }
+
+    if (!customerName || !customerName.trim()) {
+      return NextResponse.json(
+        { error: 'Nome do cliente é obrigatório' },
         { status: 400 }
       )
     }
@@ -175,11 +182,19 @@ export async function POST(
       )
     }
 
-    // Obter senderId (buyerId da negociação ou criar/buscar pelo telefone)
-    let senderId = negotiation.buyerId
-    if (phone) {
-      senderId = await getOrCreateBuyer(phone, senderName || negotiation.buyer.name)
+    // Validar que o nome corresponde ao buyer da negociação
+    const normalizedCustomerName = customerName.trim().toLowerCase()
+    const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
+    
+    if (normalizedCustomerName !== normalizedBuyerName) {
+      return NextResponse.json(
+        { error: 'Acesso negado. Esta negociação não pertence a você.' },
+        { status: 403 }
+      )
     }
+
+    // Usar o buyerId da negociação
+    const senderId = negotiation.buyerId
 
     // Criar mensagem do cliente
     const message = await prisma.message.create({

@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params
     orderId = id
     const searchParams = request.nextUrl.searchParams
-    const clientPhone = searchParams.get('phone') // Telefone do cliente para validação
+    const customerName = searchParams.get('customerName') // Nome do cliente para validação
     
     const order = await prisma.order.findUnique({
       where: { id },
@@ -32,12 +32,12 @@ export async function GET(
       })
     }
 
-    // Validação de acesso: cliente só pode acessar seus próprios pedidos
-    if (clientPhone) {
-      const normalizedClientPhone = clientPhone.replace(/\D/g, '')
-      const normalizedOrderPhone = order.customerPhone.replace(/\D/g, '')
+    // Validação de acesso: cliente só pode acessar seus próprios pedidos pelo nome
+    if (customerName) {
+      const normalizedCustomerName = customerName.trim().toLowerCase()
+      const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
       
-      if (normalizedClientPhone !== normalizedOrderPhone) {
+      if (normalizedCustomerName !== normalizedOrderName) {
         return NextResponse.json(
           { error: 'Acesso negado. Este pedido não pertence a você.' },
           { status: 403 }

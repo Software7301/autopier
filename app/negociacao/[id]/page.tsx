@@ -20,6 +20,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '@/hooks/useNotifications'
 import TypingIndicator, { NotificationToast } from '@/components/TypingIndicator'
+import NameModal from '@/components/NameModal'
+import { getUserName, setUserName, hasUserName } from '@/lib/userName'
 
 // Interfaces
 interface Message {
@@ -105,6 +107,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [userName, setUserNameState] = useState<string | null>(null)
   
   // Estados para notificações e digitação
   const [otherUserTyping, setOtherUserTyping] = useState(false)
@@ -120,6 +124,27 @@ export default function ChatPage() {
   // Hook de notificações
   const { permission, requestPermission, notifyNewMessage, playSound, isTabActive } = useNotifications()
 
+  // Verificar nome ao carregar
+  useEffect(() => {
+    const name = getUserName()
+    if (!hasUserName()) {
+      setShowNameModal(true)
+      setLoading(false)
+    } else {
+      setUserNameState(name)
+    }
+  }, [])
+
+  // Handler para quando o nome for informado
+  function handleNameSubmit(name: string) {
+    setUserName(name)
+    setUserNameState(name)
+    setShowNameModal(false)
+    setLoading(true)
+    // Recarregar dados após salvar o nome
+    fetchNegotiation()
+  }
+
   // Scroll para última mensagem (dentro do container, sem mover a página)
   function scrollToBottom() {
     if (messagesContainerRef.current) {
@@ -128,45 +153,47 @@ export default function ChatPage() {
   }
 
   // Buscar dados da negociação
-  useEffect(() => {
-    async function fetchNegotiation() {
-      try {
-        const phone = localStorage.getItem('autopier_user_phone')
-        const url = phone 
-          ? `/api/negociacao/${negotiationId}?phone=${phone}`
-          : `/api/negociacao/${negotiationId}`
-        
-        const response = await fetch(url)
-        const data = await response.json()
-        
-        if (data.error) {
-          if (response.status === 403) {
-            alert('Acesso negado. Esta negociação não pertence a você.')
-            router.push('/cliente')
-            return
-          }
-          router.push('/negociacao')
+  async function fetchNegotiation() {
+    if (!userName) return
+    
+    try {
+      const url = `/api/negociacao/${negotiationId}?customerName=${encodeURIComponent(userName)}`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        if (response.status === 403) {
+          alert('Acesso negado. Esta negociação não pertence a você.')
+          router.push('/cliente')
           return
         }
-        
-        setNegotiation(data)
-        setMessages(data.messages || [])
-        // IMPORTANTE: Inicializar o contador de mensagens para evitar notificação na primeira carga
-        prevMessagesCountRef.current = (data.messages || []).length
-        // Por simplicidade, assumimos que o usuário atual é o buyer
-        setCurrentUserId(data.buyer?.id || 'user-1')
-        console.log('📋 Carregamento inicial:', {
-          messagesCount: (data.messages || []).length,
-          userId: data.buyer?.id,
-        })
-      } catch (error) {
-        console.error('Erro ao buscar negociação:', error)
-      } finally {
-        setLoading(false)
+        router.push('/negociacao')
+        return
       }
+      
+      setNegotiation(data)
+      setMessages(data.messages || [])
+      // IMPORTANTE: Inicializar o contador de mensagens para evitar notificação na primeira carga
+      prevMessagesCountRef.current = (data.messages || []).length
+      // Por simplicidade, assumimos que o usuário atual é o buyer
+      setCurrentUserId(data.buyer?.id || 'user-1')
+      console.log('📋 Carregamento inicial:', {
+        messagesCount: (data.messages || []).length,
+        userId: data.buyer?.id,
+      })
+    } catch (error) {
+      console.error('Erro ao buscar negociação:', error)
+    } finally {
+      setLoading(false)
     }
-    fetchNegotiation()
-  }, [negotiationId, router])
+  }
+
+  useEffect(() => {
+    if (userName) {
+      fetchNegotiation()
+    }
+  }, [negotiationId, userName, router])
 
 
   // Scroll quando mensagens atualizam
@@ -176,12 +203,12 @@ export default function ChatPage() {
 
   // Polling para novas mensagens + verificar digitação
   useEffect(() => {
+    if (!userName || !negotiationId) return
+    
     const interval = setInterval(async () => {
-      if (!negotiationId) return
       try {
-        const phone = localStorage.getItem('autopier_user_phone')
         // Buscar novas mensagens
-        const response = await fetch(`/api/chat?negotiationId=${negotiationId}`)
+        const response = await fetch(`/api/chat?negotiationId=${negotiationId}&customerName=${encodeURIComponent(userName)}`)
         if (response.ok) {
           const newMessages = await response.json()
           if (newMessages.length > messages.length) {
@@ -243,7 +270,7 @@ export default function ChatPage() {
     }, 2000) // A cada 2 segundos
 
     return () => clearInterval(interval)
-  }, [negotiationId, messages.length, currentUserId, notifyNewMessage, playSound, isTabActive])
+  }, [negotiationId, messages.length, currentUserId, userName, notifyNewMessage, playSound, isTabActive])
 
   // Enviar status de digitação
   const sendTypingStatus = useCallback(async (typing: boolean) => {
@@ -308,7 +335,7 @@ export default function ChatPage() {
   // Enviar mensagem
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault()
-    if (!newMessage.trim() || sending || !negotiation) return
+    if (!newMessage.trim() || sending || !negotiation || !userName) return
 
     setSending(true)
     const messageContent = newMessage.trim()
@@ -322,6 +349,7 @@ export default function ChatPage() {
           negotiationId,
           senderId: currentUserId,
           content: messageContent,
+          customerName: userName,
         }),
       })
 
@@ -334,7 +362,7 @@ export default function ChatPage() {
         createdAt: new Date().toISOString(),
         sender: {
           id: currentUserId,
-          name: negotiation.buyer?.name || 'Você',
+          name: negotiation.buyer?.name || userName,
           role: 'CUSTOMER',
         },
       }
@@ -348,8 +376,18 @@ export default function ChatPage() {
     }
   }
 
+  // Mostrar modal de nome se necessário
+  if (showNameModal) {
+    return (
+      <NameModal
+        isOpen={showNameModal}
+        onNameSubmit={handleNameSubmit}
+      />
+    )
+  }
+
   // Loading state
-  if (loading) {
+  if (loading || !userName) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
