@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient, PaymentMethod, OrderStatus } from '@prisma/client'
+import { PaymentMethod, OrderStatus } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 
-const prisma = new PrismaClient()
+// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // ===== VALIDADORES =====
 function validateRg(rg: string) {
@@ -84,10 +87,20 @@ export async function POST(req: Request) {
       success: true,
       orderId: order.id,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Checkout error:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    
+    // Retornar mensagem de erro mais específica
+    const errorMessage = error.message || 'Erro interno no checkout'
+    
     return NextResponse.json(
-      { error: 'Erro interno no checkout' },
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
