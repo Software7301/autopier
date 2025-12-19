@@ -12,8 +12,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let orderId = ''
   try {
     const { id } = await params
+    orderId = id
     const searchParams = request.nextUrl.searchParams
     const clientPhone = searchParams.get('phone') // Telefone do cliente para validação
     
@@ -22,10 +24,12 @@ export async function GET(
     })
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Pedido não encontrado' },
-        { status: 404 }
-      )
+      // ⚠️ Retornar estrutura vazia ao invés de erro para não quebrar frontend
+      return NextResponse.json({
+        orderId: id,
+        customerName: '',
+        messages: [], // ⚠️ Sempre array
+      })
     }
 
     // Validação de acesso: cliente só pode acessar seus próprios pedidos
@@ -42,21 +46,25 @@ export async function GET(
     }
 
     // NOTA: Messages não estão vinculadas a Orders no schema atual
-    // Retornar estrutura vazia para manter compatibilidade
+    // Retornar array vazio de mensagens para manter compatibilidade
+    // ⚠️ IMPORTANTE: Sempre retornar array de mensagens, mesmo que vazio
     return NextResponse.json({
       orderId: id,
       customerName: order.customerName,
-      messages: [],
+      messages: [], // ⚠️ Sempre array, nunca objeto
     })
   } catch (error: any) {
     console.error('❌ Erro ao buscar mensagens do pedido:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar mensagens do pedido' },
-      { status: 500 }
-    )
+    // ⚠️ SEMPRE retornar estrutura com array vazio, mesmo em erro
+    console.warn('⚠️ Erro ao buscar mensagens. Retornando estrutura vazia.')
+    return NextResponse.json({
+      orderId: orderId || '',
+      customerName: '',
+      messages: [], // ⚠️ Sempre array
+    })
   }
 }
 

@@ -88,10 +88,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar pedidos' },
-      { status: 500 }
-    )
+    // ⚠️ SEMPRE retornar array, mesmo em erro, para não quebrar o frontend
+    console.warn('⚠️ Erro ao buscar pedidos. Retornando array vazio.')
+    return NextResponse.json([])
   }
 }
 

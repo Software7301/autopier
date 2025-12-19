@@ -76,8 +76,10 @@ export default function PedidoChatPage() {
         if (response.ok) {
           const data = await response.json()
           setCustomerName(data.customerName || 'Cliente')
-          setMessages(data.messages || [])
-          prevMessagesCountRef.current = (data.messages || []).length
+          // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
+          const safeMessages = Array.isArray(data.messages) ? data.messages : []
+          setMessages(safeMessages)
+          prevMessagesCountRef.current = safeMessages.length
         } else if (response.status === 403) {
           alert('Acesso negado. Este pedido não pertence a você.')
           window.location.href = '/cliente'
@@ -104,9 +106,11 @@ export default function PedidoChatPage() {
         const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
-          if (data.messages && data.messages.length > messages.length) {
+          // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
+          const safeMessages = Array.isArray(data.messages) ? data.messages : []
+          if (safeMessages.length > messages.length) {
             // Verificar se é uma mensagem do funcionário
-            const lastNewMessage = data.messages[data.messages.length - 1]
+            const lastNewMessage = safeMessages[safeMessages.length - 1]
             if (lastNewMessage && lastNewMessage.sender === 'funcionario') {
               // Notificar apenas se não for a primeira carga
               if (prevMessagesCountRef.current > 0) {
@@ -131,8 +135,8 @@ export default function PedidoChatPage() {
                 }
               }
             }
-            setMessages(data.messages)
-            prevMessagesCountRef.current = data.messages.length
+            setMessages(safeMessages)
+            prevMessagesCountRef.current = safeMessages.length
           }
         }
 

@@ -217,7 +217,9 @@ export default function DashboardPage() {
         // Buscar pedidos recentes
         const ordersRes = await fetch('/api/dashboard/orders')
         const ordersData = await ordersRes.json()
-        setRecentOrders(ordersData.slice(0, 5))
+        // ⚠️ PROTEÇÃO: Sempre garantir que é array antes de usar .slice()
+        const safeOrders = Array.isArray(ordersData) ? ordersData : []
+        setRecentOrders(safeOrders.slice(0, 5))
       } catch (error) {
         console.error('Erro ao buscar dados:', error)
       } finally {
