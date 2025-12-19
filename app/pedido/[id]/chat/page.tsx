@@ -274,9 +274,18 @@ export default function PedidoChatPage() {
         const sentMessage = await response.json()
         setMessages((prev) => [...prev, sentMessage])
         prevMessagesCountRef.current = messages.length + 1
+      } else {
+        const errorData = await response.json()
+        console.error('Erro ao enviar mensagem:', errorData)
+        alert(errorData.error || 'Erro ao enviar mensagem. Tente novamente.')
+        // Restaurar mensagem no input se houver erro
+        setNewMessage(messageContent)
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
+      alert('Erro ao enviar mensagem. Verifique sua conexão e tente novamente.')
+      // Restaurar mensagem no input se houver erro
+      setNewMessage(messageContent)
     } finally {
       setSending(false)
       inputRef.current?.focus()

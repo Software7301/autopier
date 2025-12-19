@@ -48,7 +48,7 @@ model Car {
 }
 
 model Order {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   userId        String?
   carId         String
   customerName  String
@@ -56,13 +56,14 @@ model Order {
   customerPhone String
   paymentMethod PaymentMethod
   totalPrice    Float
-  installments  Int           @default(1)
+  installments  Int            @default(1)
   selectedColor String?
-  status        OrderStatus   @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  car           Car           @relation(fields: [carId], references: [id])
-  user          User?         @relation(fields: [userId], references: [id])
+  status        OrderStatus    @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  car           Car            @relation(fields: [carId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
+  messages      OrderMessage[]
 
   @@map("orders")
 }
@@ -100,6 +101,18 @@ model Message {
   sender        User        @relation(fields: [senderId], references: [id])
 
   @@map("messages")
+}
+
+model OrderMessage {
+  id         String   @id @default(cuid())
+  content    String
+  orderId    String
+  senderName String
+  sender     String // 'cliente' ou 'funcionario'
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_messages")
 }
 
 enum UserRole {

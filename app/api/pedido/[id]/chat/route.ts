@@ -6,8 +6,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // GET - Buscar mensagens do pedido
-// NOTA: O schema Prisma atual não tem Message vinculada a Order, apenas a Negotiation
-// Esta rota retorna vazio por enquanto, mas mantém a estrutura para compatibilidade
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,6 +19,11 @@ export async function GET(
     
     const order = await prisma.order.findUnique({
       where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     })
 
     if (!order) {
@@ -45,13 +48,19 @@ export async function GET(
       }
     }
 
-    // NOTA: Messages não estão vinculadas a Orders no schema atual
-    // Retornar array vazio de mensagens para manter compatibilidade
-    // ⚠️ IMPORTANTE: Sempre retornar array de mensagens, mesmo que vazio
+    // Formatar mensagens para o frontend
+    const formattedMessages = order.messages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      createdAt: msg.createdAt.toISOString(),
+      sender: msg.sender as 'cliente' | 'funcionario',
+      senderName: msg.senderName,
+    }))
+
     return NextResponse.json({
       orderId: id,
       customerName: order.customerName,
-      messages: [], // ⚠️ Sempre array, nunca objeto
+      messages: formattedMessages,
     })
   } catch (error: any) {
     console.error('❌ Erro ao buscar mensagens do pedido:', error)
@@ -69,8 +78,6 @@ export async function GET(
 }
 
 // POST - Enviar mensagem no chat do pedido
-// NOTA: O schema Prisma atual não suporta mensagens para Orders
-// Esta rota retorna erro informativo, mas mantém a estrutura para compatibilidade
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,11 +85,18 @@ export async function POST(
   try {
     const { id } = await params
     const body = await request.json()
-    const { content } = body
+    const { content, sender, senderName, customerName } = body
 
     if (!content || !content.trim()) {
       return NextResponse.json(
         { error: 'Mensagem não pode ser vazia' },
+        { status: 400 }
+      )
+    }
+
+    if (!customerName || !customerName.trim()) {
+      return NextResponse.json(
+        { error: 'Nome do cliente é obrigatório' },
         { status: 400 }
       )
     }
@@ -98,12 +112,36 @@ export async function POST(
       )
     }
 
-    // NOTA: Messages não estão vinculadas a Orders no schema atual
-    // Retornar erro informativo
-    return NextResponse.json(
-      { error: 'Mensagens para pedidos não estão disponíveis no momento. Use negociações para comunicação.' },
-      { status: 501 }
-    )
+    // Validar acesso pelo nome
+    const normalizedCustomerName = customerName.trim().toLowerCase()
+    const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
+    
+    if (normalizedCustomerName !== normalizedOrderName) {
+      return NextResponse.json(
+        { error: 'Acesso negado. Este pedido não pertence a você.' },
+        { status: 403 }
+      )
+    }
+
+    // Criar mensagem
+    const message = await prisma.orderMessage.create({
+      data: {
+        orderId: id,
+        content: content.trim(),
+        sender: sender || 'cliente',
+        senderName: senderName || customerName,
+      },
+    })
+
+    console.log('✅ Mensagem do pedido criada:', message.id)
+
+    return NextResponse.json({
+      id: message.id,
+      content: message.content,
+      createdAt: message.createdAt.toISOString(),
+      sender: message.sender as 'cliente' | 'funcionario',
+      senderName: message.senderName,
+    }, { status: 201 })
   } catch (error: any) {
     console.error('❌ Erro ao enviar mensagem:', error)
     console.error('Error code:', error.code)
