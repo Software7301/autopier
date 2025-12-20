@@ -82,7 +82,6 @@ export default function ClientePedidosPage() {
       const ordersResponse = await fetch(`/api/client/orders?customerName=${encodeURIComponent(customerName)}`)
       const ordersData = await ordersResponse.json()
       
-      // ⚠️ PROTEÇÃO: Sempre garantir que é array
       setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error)

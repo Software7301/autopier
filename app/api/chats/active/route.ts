@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NegotiationStatus } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 

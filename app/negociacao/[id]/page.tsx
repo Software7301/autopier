@@ -174,9 +174,7 @@ export default function ChatPage() {
       
       setNegotiation(data)
       setMessages(data.messages || [])
-      // IMPORTANTE: Inicializar o contador de mensagens para evitar notificação na primeira carga
       prevMessagesCountRef.current = (data.messages || []).length
-      // Por simplicidade, assumimos que o usuário atual é o buyer
       setCurrentUserId(data.buyer?.id || 'user-1')
       console.log('📋 Carregamento inicial:', {
         messagesCount: (data.messages || []).length,

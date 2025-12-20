@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentMethod } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -88,13 +87,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // ⚠️ SEMPRE retornar array, mesmo em erro, para não quebrar o frontend
-    console.warn('⚠️ Erro ao buscar pedidos. Retornando array vazio.')
+    console.warn('Erro ao buscar pedidos. Retornando array vazio.')
     return NextResponse.json([])
   }
 }
 
-// PATCH - Atualizar status do pedido
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()

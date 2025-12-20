@@ -3,11 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { NegotiationStatus } from '@prisma/client'
 import { getOrCreateBuyer } from '@/lib/users'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar negociação por ID com mensagens
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -144,7 +142,6 @@ export async function PATCH(
   }
 }
 
-// POST - Enviar mensagem na negociação (cliente)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

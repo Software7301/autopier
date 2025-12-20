@@ -107,7 +107,6 @@ export default function ClientePage() {
       const negData = await negResponse.json()
       const ordersData = await ordersResponse.json()
       
-      // ⚠️ PROTEÇÃO: Sempre garantir que são arrays
       setNegotiations(Array.isArray(negData) ? negData : [])
       setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {

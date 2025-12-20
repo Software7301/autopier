@@ -3,17 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { NegotiationStatus } from '@prisma/client'
 import { getOrCreateSeller, getOrCreateBuyer } from '@/lib/users'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// POST - Enviar mensagem
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { negotiationId, senderId, senderName, content, sender, customerName } = body
 
-    // Validação básica
     if (!negotiationId || !content) {
       return NextResponse.json(
         { error: 'Negociação e conteúdo são obrigatórios' },
@@ -21,7 +18,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar se a negociação existe
     const negotiation = await prisma.negotiation.findUnique({
       where: { id: negotiationId },
       include: {
@@ -36,15 +32,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determinar se é cliente ou funcionário
     const isEmployee = sender === 'funcionario' || senderId === 'seller-autopier'
     
-    // Obter senderId correto
     let finalSenderId: string
     if (isEmployee) {
       finalSenderId = await getOrCreateSeller()
     } else {
-      // Se é cliente, validar pelo nome
       if (customerName) {
         const normalizedCustomerName = customerName.trim().toLowerCase()
         const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
@@ -56,11 +49,9 @@ export async function POST(request: NextRequest) {
           )
         }
       }
-      // Usar o buyerId da negociação
       finalSenderId = negotiation.buyerId
     }
 
-    // Criar mensagem
     const message = await prisma.message.create({
       data: {
         negotiationId,
@@ -72,7 +63,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Atualizar status da negociação para IN_PROGRESS se estiver OPEN
     if (negotiation.status === NegotiationStatus.OPEN) {
       await prisma.negotiation.update({
         where: { id: negotiationId },
@@ -80,7 +70,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('✅ Mensagem enviada via chat:', message.id)
+    console.log('Mensagem enviada via chat:', message.id)
 
     return NextResponse.json({
       id: message.id,
@@ -93,7 +83,7 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 })
   } catch (error: any) {
-    console.error('❌ Erro ao enviar mensagem:', error)
+    console.error('Erro ao enviar mensagem:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
@@ -104,7 +94,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Buscar mensagens de uma negociação
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -132,7 +121,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Validar acesso pelo nome se fornecido
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
@@ -166,18 +154,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedMessages)
   } catch (error: any) {
-    console.error('❌ Erro ao buscar mensagens:', error)
+    console.error('Erro ao buscar mensagens:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
-    // Erros de conexão do Prisma
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
       error.name === 'PrismaClientInitializationError'
     ) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      console.warn('Banco indisponível. Retornando array vazio.')
       return NextResponse.json([])
     }
 

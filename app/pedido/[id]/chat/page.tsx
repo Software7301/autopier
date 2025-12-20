@@ -67,13 +67,12 @@ export default function PedidoChatPage() {
   // Hook de notificações
   const { permission, requestPermission, notifyNewMessage, playSound, isTabActive } = useNotifications()
 
-  // Verificar nome ao carregar
   useEffect(() => {
     const name = getUserName()
     if (!hasUserName()) {
       setShowNameModal(true)
       setLoading(false)
-    } else {
+    } else if (name) {
       setUserNameState(name)
     }
   }, [])
@@ -88,9 +87,11 @@ export default function PedidoChatPage() {
     fetchChat()
   }
 
-  // Buscar dados do chat
   async function fetchChat() {
-    if (!userName) return
+    if (!userName) {
+      console.error('userName não definido ao buscar chat')
+      return
+    }
     
     try {
       const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
@@ -99,7 +100,6 @@ export default function PedidoChatPage() {
       if (response.ok) {
         const data = await response.json()
         setCustomerName(data.customerName || userName)
-        // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
         const safeMessages = Array.isArray(data.messages) ? data.messages : []
         setMessages(safeMessages)
         prevMessagesCountRef.current = safeMessages.length
@@ -120,7 +120,6 @@ export default function PedidoChatPage() {
     }
   }, [orderId, userName])
 
-  // Polling para novas mensagens + verificar digitação
   useEffect(() => {
     if (!userName || !orderId) return
     
@@ -128,22 +127,16 @@ export default function PedidoChatPage() {
       try {
         const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
         
-        // Buscar novas mensagens
         const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
-          // ⚠️ PROTEÇÃO: Sempre garantir que messages é array
           const safeMessages = Array.isArray(data.messages) ? data.messages : []
           if (safeMessages.length > messages.length) {
-            // Verificar se é uma mensagem do funcionário
             const lastNewMessage = safeMessages[safeMessages.length - 1]
             if (lastNewMessage && lastNewMessage.sender === 'funcionario') {
-              // Notificar apenas se não for a primeira carga
               if (prevMessagesCountRef.current > 0) {
-                // SEMPRE tocar som
                 playSound()
                 
-                // SEMPRE mostrar toast
                 setToastMessage({
                   title: `${lastNewMessage.senderName || 'AutoPier'}`,
                   message: lastNewMessage.content,
@@ -151,7 +144,6 @@ export default function PedidoChatPage() {
                 setShowToast(true)
                 setTimeout(() => setShowToast(false), 4000)
                 
-                // Se aba em segundo plano, também mostrar notificação do navegador
                 if (!isTabActive()) {
                   notifyNewMessage(
                     lastNewMessage.senderName || 'AutoPier',
@@ -166,21 +158,18 @@ export default function PedidoChatPage() {
           }
         }
 
-        // Verificar se funcionário está digitando
         const typingResponse = await fetch(`/api/typing?chatId=order-${orderId}`)
         if (typingResponse.ok) {
           const typingData = await typingResponse.json()
           setOtherUserTyping(typingData.typing && typingData.userName !== customerName)
         }
       } catch (error) {
-        // Silenciar erros de polling
       }
     }, 2000)
 
     return () => clearInterval(interval)
   }, [orderId, messages.length, customerName, userName, notifyNewMessage, playSound, isTabActive])
 
-  // Enviar status de digitação
   const sendTypingStatus = useCallback(async (typing: boolean) => {
     if (!orderId || !customerName) return
     try {
@@ -194,11 +183,9 @@ export default function PedidoChatPage() {
         }),
       })
     } catch (error) {
-      // Erro silencioso
     }
   }, [orderId, customerName])
 
-  // Handler para digitação
   const handleTyping = useCallback(() => {
     const now = Date.now()
     
@@ -219,7 +206,6 @@ export default function PedidoChatPage() {
     }, 3000)
   }, [sendTypingStatus])
 
-  // Solicitar permissão de notificação
   useEffect(() => {
     if (permission === 'default') {
       const timer = setTimeout(() => {
@@ -229,7 +215,6 @@ export default function PedidoChatPage() {
     }
   }, [permission, requestPermission])
 
-  // Limpar timeout ao desmontar
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -251,7 +236,12 @@ export default function PedidoChatPage() {
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault()
-    if (!newMessage.trim() || sending || !userName) return
+    if (!newMessage.trim() || sending || !userName) {
+      if (!userName) {
+        alert('Erro: Nome do usuário não encontrado. Por favor, recarregue a página.')
+      }
+      return
+    }
 
     setSending(true)
     sendTypingStatus(false)
@@ -259,15 +249,19 @@ export default function PedidoChatPage() {
     setNewMessage('')
 
     try {
+      const payload = {
+        content: messageContent,
+        sender: 'cliente',
+        senderName: userName,
+        customerName: userName,
+      }
+      
+      console.log('Enviando mensagem:', payload)
+
       const response = await fetch(`/api/pedido/${orderId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: messageContent,
-          sender: 'cliente',
-          senderName: userName,
-          customerName: userName,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
@@ -275,10 +269,19 @@ export default function PedidoChatPage() {
         setMessages((prev) => [...prev, sentMessage])
         prevMessagesCountRef.current = messages.length + 1
       } else {
-        const errorData = await response.json()
-        console.error('Erro ao enviar mensagem:', errorData)
-        alert(errorData.error || 'Erro ao enviar mensagem. Tente novamente.')
-        // Restaurar mensagem no input se houver erro
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { error: `Erro ${response.status}: ${response.statusText}` }
+        }
+        console.error('Erro ao enviar mensagem:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          payload: payload
+        })
+        alert(errorData.error || `Erro ${response.status}: ${response.statusText}`)
         setNewMessage(messageContent)
       }
     } catch (error) {
@@ -292,7 +295,6 @@ export default function PedidoChatPage() {
     }
   }
 
-  // Mostrar modal de nome se necessário
   if (showNameModal) {
     return (
       <NameModal

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar mensagens do pedido
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +13,7 @@ export async function GET(
     const { id } = await params
     orderId = id
     const searchParams = request.nextUrl.searchParams
-    const customerName = searchParams.get('customerName') // Nome do cliente para validação
+    const customerName = searchParams.get('customerName')
     
     const order = await prisma.order.findUnique({
       where: { id },
@@ -27,15 +25,13 @@ export async function GET(
     })
 
     if (!order) {
-      // ⚠️ Retornar estrutura vazia ao invés de erro para não quebrar frontend
       return NextResponse.json({
         orderId: id,
         customerName: '',
-        messages: [], // ⚠️ Sempre array
+        messages: [],
       })
     }
 
-    // Validação de acesso: cliente só pode acessar seus próprios pedidos pelo nome
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
@@ -48,7 +44,6 @@ export async function GET(
       }
     }
 
-    // Formatar mensagens para o frontend
     const formattedMessages = order.messages.map(msg => ({
       id: msg.id,
       content: msg.content,
@@ -63,21 +58,18 @@ export async function GET(
       messages: formattedMessages,
     })
   } catch (error: any) {
-    console.error('❌ Erro ao buscar mensagens do pedido:', error)
+    console.error('Erro ao buscar mensagens do pedido:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
-    // ⚠️ SEMPRE retornar estrutura com array vazio, mesmo em erro
-    console.warn('⚠️ Erro ao buscar mensagens. Retornando estrutura vazia.')
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
-      messages: [], // ⚠️ Sempre array
+      messages: [],
     })
   }
 }
 
-// POST - Enviar mensagem no chat do pedido
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -87,6 +79,8 @@ export async function POST(
     const body = await request.json()
     const { content, sender, senderName, customerName } = body
 
+    console.log('POST /api/pedido/[id]/chat - Body recebido:', { content, sender, senderName, customerName, orderId: id })
+
     if (!content || !content.trim()) {
       return NextResponse.json(
         { error: 'Mensagem não pode ser vazia' },
@@ -95,8 +89,9 @@ export async function POST(
     }
 
     if (!customerName || !customerName.trim()) {
+      console.error('Erro: customerName não fornecido ou vazio')
       return NextResponse.json(
-        { error: 'Nome do cliente é obrigatório' },
+        { error: 'Nome do cliente é obrigatório. Por favor, informe seu nome novamente.' },
         { status: 400 }
       )
     }
@@ -112,7 +107,6 @@ export async function POST(
       )
     }
 
-    // Validar acesso pelo nome
     const normalizedCustomerName = customerName.trim().toLowerCase()
     const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
     
@@ -123,7 +117,6 @@ export async function POST(
       )
     }
 
-    // Criar mensagem
     const message = await prisma.orderMessage.create({
       data: {
         orderId: id,
@@ -133,7 +126,7 @@ export async function POST(
       },
     })
 
-    console.log('✅ Mensagem do pedido criada:', message.id)
+    console.log('Mensagem do pedido criada:', message.id)
 
     return NextResponse.json({
       id: message.id,
@@ -143,7 +136,7 @@ export async function POST(
       senderName: message.senderName,
     }, { status: 201 })
   } catch (error: any) {
-    console.error('❌ Erro ao enviar mensagem:', error)
+    console.error('Erro ao enviar mensagem:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 

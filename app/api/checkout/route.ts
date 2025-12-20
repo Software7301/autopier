@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server'
 import { PaymentMethod, OrderStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// ===== VALIDADORES =====
 function validateRg(rg: string) {
   return /^\d{6}$/.test(rg.replace(/\D/g, ''))
 }
@@ -15,7 +13,6 @@ function validatePhone(phone: string) {
   return phone.replace(/\D/g, '').length >= 6
 }
 
-// ===== POST /api/checkout =====
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -31,7 +28,6 @@ export async function POST(req: Request) {
       selectedColor,
     } = body
 
-    // ===== VALIDAÇÕES =====
     if (!carId) {
       return NextResponse.json({ error: 'Carro não informado' }, { status: 400 })
     }
@@ -52,7 +48,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forma de pagamento inválida' }, { status: 400 })
     }
 
-    // ===== VERIFICAR CARRO =====
     const car = await prisma.car.findUnique({
       where: { id: carId },
     })
@@ -65,7 +60,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Carro indisponível' }, { status: 400 })
     }
 
-    // ===== CRIAR PEDIDO =====
     const order = await prisma.order.create({
       data: {
         carId,
@@ -88,12 +82,11 @@ export async function POST(req: Request) {
       orderId: order.id,
     })
   } catch (error: any) {
-    console.error('❌ Checkout error:', error)
+    console.error('Checkout error:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
     
-    // Retornar mensagem de erro mais específica
     const errorMessage = error.message || 'Erro interno no checkout'
     
     return NextResponse.json(

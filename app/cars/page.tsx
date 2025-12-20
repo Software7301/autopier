@@ -45,8 +45,6 @@ export default function CarsPage() {
       const response = await fetch('/api/cars', { cache: 'no-store' })
       const data = await response.json()
       
-      // ⚠️ PROTEÇÃO: Garantir que sempre seja um array
-      // Isso evita crash no .filter() se a API retornar erro
       const safeData = Array.isArray(data) ? data : []
       
       console.log('Carros carregados:', safeData.length, safeData)
@@ -54,7 +52,6 @@ export default function CarsPage() {
       setFilteredCars(safeData)
     } catch (error) {
       console.error('Erro ao buscar carros:', error)
-      // Em caso de erro, garantir que seja array vazio
       setCars([])
       setFilteredCars([])
     } finally {
@@ -62,14 +59,11 @@ export default function CarsPage() {
     }
   }
 
-  // Buscar carros da API ao carregar
   useEffect(() => {
     fetchCars()
   }, [])
 
-  // Filtrar carros quando categoria ou busca mudar
   useEffect(() => {
-    // ⚠️ PROTEÇÃO: Garantir que cars seja sempre um array
     const safeCars = Array.isArray(cars) ? cars : []
     let result = safeCars
 

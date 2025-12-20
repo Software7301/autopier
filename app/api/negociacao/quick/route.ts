@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { NegotiationType, NegotiationStatus } from '@prisma/client'
 import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 

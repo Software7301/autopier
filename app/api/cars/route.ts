@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
-// Edge runtime NÃO suporta Prisma - FORÇAR Node.js
 export const runtime = 'nodejs'
-
-// Forçar renderização dinâmica
 export const dynamic = 'force-dynamic'
 
-// =======================
-// GET - Listar veículos
-// =======================
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -34,24 +27,19 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Garantir que sempre retorna um array
     return NextResponse.json(Array.isArray(cars) ? cars : [])
   } catch (error: any) {
-    console.error('❌ Erro ao buscar carros:', error)
+    console.error('Erro ao buscar carros:', error)
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // ⚠️ IMPORTANTE: SEMPRE retornar array vazio, nunca objeto de erro
-    // Isso evita que o frontend quebre no .filter()
-    console.warn('⚠️ Erro ao buscar carros. Retornando array vazio para evitar crash no frontend.')
+    console.warn('Erro ao buscar carros. Retornando array vazio.')
     return NextResponse.json([])
   }
 }
 
-// =======================
-// POST - Criar veículo
 // =======================
 export async function POST(request: NextRequest) {
   try {
