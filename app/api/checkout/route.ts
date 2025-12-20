@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       carId,
       customerName,
       customerRg,
-      customerPhone,
+      customerPhone,        
       paymentMethod,
       installments,
       totalPrice,
