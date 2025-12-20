@@ -79,8 +79,6 @@ export async function POST(
     const body = await request.json()
     const { content, sender, senderName, customerName } = body
 
-    console.log('POST /api/pedido/[id]/chat - Body recebido:', { content, sender, senderName, customerName, orderId: id })
-
     if (!content || !content.trim()) {
       return NextResponse.json(
         { error: 'Mensagem não pode ser vazia' },
@@ -89,9 +87,8 @@ export async function POST(
     }
 
     if (!customerName || !customerName.trim()) {
-      console.error('Erro: customerName não fornecido ou vazio')
       return NextResponse.json(
-        { error: 'Nome do cliente é obrigatório. Por favor, informe seu nome novamente.' },
+        { error: 'Nome do cliente é obrigatório' },
         { status: 400 }
       )
     }
@@ -125,8 +122,6 @@ export async function POST(
         senderName: senderName || customerName,
       },
     })
-
-    console.log('Mensagem do pedido criada:', message.id)
 
     return NextResponse.json({
       id: message.id,

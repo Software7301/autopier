@@ -249,16 +249,16 @@ export default function PedidoChatPage() {
     setNewMessage('')
 
     try {
-      const payload = {
-        content: messageContent,
-        sender: 'cliente',
-        senderName: userName,
-        customerName: userName,
-      }
-      
-      console.log('Enviando mensagem:', payload)
-
       const response = await fetch(`/api/pedido/${orderId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: messageContent,
+          sender: 'cliente',
+          senderName: userName,
+          customerName: userName,
+        }),
+      })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
