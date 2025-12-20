@@ -59,6 +59,16 @@ export async function GET(
     })
   } catch (error: any) {
     console.error('Erro ao buscar mensagens do pedido:', error)
+    
+    if (error.code === 'P2021' || error.message?.includes('does not exist')) {
+      console.error('Tabela order_messages não existe. Execute: npx prisma db push')
+      return NextResponse.json({
+        orderId: orderId || '',
+        customerName: '',
+        messages: [],
+      }, { status: 200 })
+    }
+    
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
@@ -132,8 +142,14 @@ export async function POST(
     }, { status: 201 })
   } catch (error: any) {
     console.error('Erro ao enviar mensagem:', error)
-    console.error('Error code:', error.code)
-    console.error('Error message:', error.message)
+    
+    if (error.code === 'P2021' || error.message?.includes('does not exist')) {
+      console.error('Tabela order_messages não existe. Execute: npx prisma db push')
+      return NextResponse.json(
+        { error: 'Sistema em manutenção. Tente novamente em alguns instantes.' },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json(
       { error: 'Erro ao enviar mensagem' },
