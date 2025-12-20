@@ -44,7 +44,7 @@ export async function GET(
       }
     }
 
-    const formattedMessages = order.messages.map(msg => ({
+    const formattedMessages = (order.messages || []).map(msg => ({
       id: msg.id,
       content: msg.content,
       createdAt: msg.createdAt.toISOString(),
