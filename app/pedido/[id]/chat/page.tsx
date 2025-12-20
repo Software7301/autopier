@@ -88,10 +88,7 @@ export default function PedidoChatPage() {
   }
 
   async function fetchChat() {
-    if (!userName) {
-      console.error('userName não definido ao buscar chat')
-      return
-    }
+    if (!userName) return
     
     try {
       const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
@@ -259,29 +256,14 @@ export default function PedidoChatPage() {
           customerName: userName,
         }),
       })
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
 
       if (response.ok) {
         const sentMessage = await response.json()
         setMessages((prev) => [...prev, sentMessage])
         prevMessagesCountRef.current = messages.length + 1
       } else {
-        let errorData
-        try {
-          errorData = await response.json()
-        } catch {
-          errorData = { error: `Erro ${response.status}: ${response.statusText}` }
-        }
-        console.error('Erro ao enviar mensagem:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-          payload: payload
-        })
-        alert(errorData.error || `Erro ${response.status}: ${response.statusText}`)
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao enviar mensagem' }))
+        alert(errorData.error || 'Erro ao enviar mensagem')
         setNewMessage(messageContent)
       }
     } catch (error) {
