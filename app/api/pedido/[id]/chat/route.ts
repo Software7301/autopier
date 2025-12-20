@@ -59,14 +59,11 @@ export async function GET(
     })
   } catch (error: any) {
     console.error('Erro ao buscar mensagens do pedido:', error)
-    console.error('Error code:', error.code)
-    console.error('Error message:', error.message)
-
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
       messages: [],
-    })
+    }, { status: 200 })
   }
 }
 
@@ -122,7 +119,7 @@ export async function POST(
         orderId: id,
         content: content.trim(),
         sender: sender || 'cliente',
-        senderName: senderName || customerName,
+        senderName: senderName || customerName || 'Sistema',
       },
     })
 
