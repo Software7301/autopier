@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Paintbrush
 } from 'lucide-react'
+import { setUserName } from '@/lib/userName'
 
 // Interface do carro (simplificada)
 interface CarData {
@@ -221,9 +222,9 @@ export default function CheckoutPage() {
       const result = await response.json()
 
       if (response.ok) {
-        // Salvar telefone para reconexão futura
-        localStorage.setItem('autopier_user_phone', formData.customerPhone.replace(/\D/g, ''))
-        localStorage.setItem('autopier_user_name', formData.customerName)
+        const customerName = formData.customerName.trim()
+        
+        setUserName(customerName)
         
         setOrderId(result.orderId)
         setSuccess(true)
