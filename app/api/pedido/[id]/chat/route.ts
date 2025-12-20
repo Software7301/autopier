@@ -86,13 +86,6 @@ export async function POST(
       )
     }
 
-    if (!customerName || !customerName.trim()) {
-      return NextResponse.json(
-        { error: 'Nome do cliente é obrigatório' },
-        { status: 400 }
-      )
-    }
-
     const order = await prisma.order.findUnique({
       where: { id },
     })
@@ -104,14 +97,24 @@ export async function POST(
       )
     }
 
-    const normalizedCustomerName = customerName.trim().toLowerCase()
-    const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
-    
-    if (normalizedCustomerName !== normalizedOrderName) {
-      return NextResponse.json(
-        { error: 'Acesso negado. Este pedido não pertence a você.' },
-        { status: 403 }
-      )
+    if (sender === 'funcionario') {
+    } else {
+      if (!customerName || !customerName.trim()) {
+        return NextResponse.json(
+          { error: 'Nome do cliente é obrigatório' },
+          { status: 400 }
+        )
+      }
+
+      const normalizedCustomerName = customerName.trim().toLowerCase()
+      const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
+      
+      if (normalizedCustomerName !== normalizedOrderName) {
+        return NextResponse.json(
+          { error: 'Acesso negado. Este pedido não pertence a você.' },
+          { status: 403 }
+        )
+      }
     }
 
     const message = await prisma.orderMessage.create({
