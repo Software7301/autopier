@@ -132,7 +132,14 @@ export default function VeiculosPage() {
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)
-      setErrorMessage(error.message || 'Erro ao fazer upload da imagem. Verifique se o Supabase Storage está configurado corretamente.')
+      const errorMessage = error.message || 'Erro ao fazer upload da imagem.'
+      
+      // Mensagem mais clara se Supabase não estiver configurado
+      if (errorMessage.includes('Supabase não está configurado')) {
+        setErrorMessage('Supabase não está configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente da Vercel.')
+      } else {
+        setErrorMessage(errorMessage)
+      }
     } finally {
       setUploadingImage(false)
     }
