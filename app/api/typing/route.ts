@@ -20,6 +20,7 @@ setInterval(() => {
 }, 10000)
 
 // Forçar renderização dinâmica (usa searchParams)
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // GET - Verificar se alguém está digitando

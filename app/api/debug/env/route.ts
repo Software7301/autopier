@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 // Rota de debug para verificar variáveis de ambiente
 // ATENÇÃO: Remova esta rota em produção por segurança
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
