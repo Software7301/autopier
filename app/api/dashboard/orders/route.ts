@@ -17,6 +17,37 @@ function formatPaymentMethod(method: PaymentMethod): string {
   return methods[method] || method
 }
 
+// Função helper para retry de queries do Prisma
+async function retryQuery<T>(
+  queryFn: () => Promise<T>,
+  maxRetries = 2,
+  delay = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await queryFn()
+    } catch (error: any) {
+      const isConnectionError = 
+        error.code === 'P1001' ||
+        error.code === 'P1000' ||
+        error.code === 'P1017' ||
+        error.code === 'P1002' ||
+        error.name === 'PrismaClientInitializationError' ||
+        error.message?.includes('Can\'t reach database server') ||
+        error.message?.includes('Connection') ||
+        error.message?.includes('timeout')
+
+      if (isConnectionError && i < maxRetries - 1) {
+        console.warn(`⚠️ Tentativa ${i + 1} falhou. Tentando novamente em ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      throw error
+    }
+  }
+  throw new Error('Max retries exceeded')
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -44,16 +75,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Buscar pedidos com Prisma
-    const orders = await prisma.order.findMany({
-      where,
-      include: {
-        car: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+    // Buscar pedidos com Prisma (com retry)
+    const orders = await retryQuery(() =>
+      prisma.order.findMany({
+        where,
+        include: {
+          car: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+    )
 
     const formattedOrders = orders.map(order => ({
       id: order.id,
@@ -77,14 +110,19 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
 
     // Erros de conexão do Prisma
-    if (
+    const isConnectionError = 
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
-      error.name === 'PrismaClientInitializationError'
-    ) {
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
       console.warn('⚠️ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
+      return NextResponse.json([], { status: 503 })
     }
 
     console.warn('Erro ao buscar pedidos. Retornando array vazio.')

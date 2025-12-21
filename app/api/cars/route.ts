@@ -4,6 +4,37 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Função helper para retry de queries do Prisma
+async function retryQuery<T>(
+  queryFn: () => Promise<T>,
+  maxRetries = 2,
+  delay = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await queryFn()
+    } catch (error: any) {
+      const isConnectionError = 
+        error.code === 'P1001' ||
+        error.code === 'P1000' ||
+        error.code === 'P1017' ||
+        error.code === 'P1002' ||
+        error.name === 'PrismaClientInitializationError' ||
+        error.message?.includes('Can\'t reach database server') ||
+        error.message?.includes('Connection') ||
+        error.message?.includes('timeout')
+
+      if (isConnectionError && i < maxRetries - 1) {
+        console.warn(`⚠️ Tentativa ${i + 1} falhou. Tentando novamente em ${delay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+      throw error
+    }
+  }
+  throw new Error('Max retries exceeded')
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -20,12 +51,14 @@ export async function GET(request: NextRequest) {
       where.available = true
     }
 
-    const cars = await prisma.car.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+    const cars = await retryQuery(() =>
+      prisma.car.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+    )
 
     return NextResponse.json(Array.isArray(cars) ? cars : [])
   } catch (error: any) {
@@ -33,7 +66,22 @@ export async function GET(request: NextRequest) {
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack?.substring(0, 500))
+
+    // Erros de conexão - retornar array vazio
+    const isConnectionError = 
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
+      console.warn('⚠️ Erro de conexão com o banco. Retornando array vazio.')
+      return NextResponse.json([], { status: 503 })
+    }
 
     console.warn('Erro ao buscar carros. Retornando array vazio.')
     return NextResponse.json([])
