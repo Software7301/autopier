@@ -110,10 +110,46 @@ export async function POST(req: Request) {
       orderId: order.id,
     })
   } catch (error: any) {
-    console.error('Checkout error:', error)
+    console.error('❌ [Checkout] Erro:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
+    
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.code === 'P1002' ||
+      error.code === 'P1003' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('SSL') ||
+      error.message?.includes('timeout')
+    ) {
+      return NextResponse.json(
+        { 
+          error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
+        },
+        { status: 503 }
+      )
+    }
+
+    // Erros de validação do Prisma
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Dados duplicados. Verifique os dados informados.' },
+        { status: 409 }
+      )
+    }
+
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Recurso não encontrado' },
+        { status: 404 }
+      )
+    }
     
     const errorMessage = error.message || 'Erro interno no checkout'
     
