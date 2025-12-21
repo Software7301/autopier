@@ -15,13 +15,9 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
     
+    // Primeiro, buscar o pedido sem as mensagens para validar acesso
     const order = await prisma.order.findUnique({
       where: { id },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-        },
-      },
     })
 
     if (!order) {
@@ -29,9 +25,10 @@ export async function GET(
         orderId: id,
         customerName: '',
         messages: [],
-      })
+      }, { status: 200 })
     }
 
+    // Validar acesso se customerName for fornecido
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
@@ -44,7 +41,25 @@ export async function GET(
       }
     }
 
-    const formattedMessages = (order.messages || []).map(msg => ({
+    // Buscar mensagens separadamente para evitar erro se a tabela não existir
+    let messages: any[] = []
+    try {
+      const orderWithMessages = await prisma.order.findUnique({
+        where: { id },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      })
+      messages = orderWithMessages?.messages || []
+    } catch (messageError: any) {
+      console.error('Erro ao buscar mensagens (tabela pode não existir):', messageError)
+      // Se der erro ao buscar mensagens, retornar array vazio
+      messages = []
+    }
+
+    const formattedMessages = messages.map(msg => ({
       id: msg.id,
       content: msg.content,
       createdAt: msg.createdAt.toISOString(),
@@ -58,21 +73,17 @@ export async function GET(
       messages: formattedMessages,
     })
   } catch (error: any) {
-    console.error('Erro ao buscar mensagens do pedido:', error)
+    console.error('❌ Erro ao buscar mensagens do pedido:', error)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
     
-    if (error.code === 'P2021' || error.message?.includes('does not exist')) {
-      console.error('Tabela order_messages não existe. Execute: npx prisma db push')
-      return NextResponse.json({
-        orderId: orderId || '',
-        customerName: '',
-        messages: [],
-      }, { status: 200 })
-    }
-    
+    // Sempre retornar 200 com array vazio para não quebrar o frontend
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
       messages: [],
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     }, { status: 200 })
   }
 }
