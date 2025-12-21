@@ -5,11 +5,19 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/client/orders] Iniciando busca de pedidos do cliente...')
+  
   try {
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
 
+    console.log('📋 [GET /api/client/orders] Parâmetros:', {
+      hasCustomerName: !!customerName,
+      customerName: customerName?.substring(0, 20) + '...',
+    })
+
     if (!customerName || !customerName.trim()) {
+      console.warn('⚠️ [GET /api/client/orders] Nome do cliente não fornecido. Retornando array vazio.')
       return NextResponse.json([])
     }
 
@@ -30,6 +38,8 @@ export async function GET(request: NextRequest) {
       },
     })
     
+    console.log(`✅ [GET /api/client/orders] Encontrados ${orders.length} pedidos`)
+    
     const clientOrders = orders.map(order => ({
       id: order.id,
       carId: order.carId,
@@ -49,21 +59,28 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(clientOrders)
   } catch (error: any) {
-    console.error('Erro ao buscar pedidos do cliente:', error)
+    console.error('❌ [GET /api/client/orders] Erro ao buscar pedidos do cliente:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
-    if (
+    const isConnectionError = 
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
-      error.name === 'PrismaClientInitializationError'
-    ) {
-      console.warn('Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
+      console.warn('⚠️ [GET /api/client/orders] Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([], { status: 503 })
     }
 
-    console.warn('Erro ao buscar pedidos. Retornando array vazio.')
+    console.warn('⚠️ [GET /api/client/orders] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([])
   }
 }

@@ -7,6 +7,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/dashboard/negotiations] Iniciando busca de negociações...')
+  
   try {
     const negotiations = await prisma.negotiation.findMany({
       include: {
@@ -25,6 +27,8 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc',
       },
     })
+
+    console.log(`✅ [GET /api/dashboard/negotiations] Encontradas ${negotiations.length} negociações`)
 
     const formattedNegotiations = negotiations.map((neg) => {
       const lastMessage = neg.messages[0]
@@ -63,24 +67,30 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedNegotiations)
   } catch (error: any) {
-    console.error('❌ Erro ao buscar negociações:', error)
+    console.error('❌ [GET /api/dashboard/negotiations] Erro ao buscar negociações:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão do Prisma
-    if (
+    const isConnectionError = 
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
-      error.name === 'PrismaClientInitializationError'
-    ) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
+      console.warn('⚠️ [GET /api/dashboard/negotiations] Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([], { status: 503 })
     }
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar negociações' },
-      { status: 500 }
-    )
+    // SEMPRE retornar array vazio em caso de erro (não objeto de erro)
+    console.warn('⚠️ [GET /api/dashboard/negotiations] Erro desconhecido. Retornando array vazio.')
+    return NextResponse.json([])
   }
 }

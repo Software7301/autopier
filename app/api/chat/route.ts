@@ -134,12 +134,20 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/chat] Iniciando busca de mensagens...')
+  
   try {
     const searchParams = request.nextUrl.searchParams
     const negotiationId = searchParams.get('negotiationId')
     const customerName = searchParams.get('customerName')
 
+    console.log('📋 [GET /api/chat] Parâmetros:', {
+      negotiationId,
+      hasCustomerName: !!customerName,
+    })
+
     if (!negotiationId) {
+      console.warn('⚠️ [GET /api/chat] ID da negociação não fornecido')
       return NextResponse.json(
         { error: 'ID da negociação é obrigatório' },
         { status: 400 }
@@ -155,6 +163,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!negotiation) {
+      console.warn('⚠️ [GET /api/chat] Negociação não encontrada:', negotiationId)
       return NextResponse.json(
         { error: 'Negociação não encontrada' },
         { status: 404 }
@@ -166,6 +175,10 @@ export async function GET(request: NextRequest) {
       const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
       
       if (normalizedCustomerName !== normalizedBuyerName) {
+        console.warn('⚠️ [GET /api/chat] Acesso negado:', {
+          provided: normalizedCustomerName,
+          expected: normalizedBuyerName,
+        })
         return NextResponse.json(
           { error: 'Acesso negado. Esta negociação não pertence a você.' },
           { status: 403 }
@@ -183,8 +196,9 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'asc' },
       })
+      console.log(`✅ [GET /api/chat] Encontradas ${messages.length} mensagens`)
     } catch (messageError: any) {
-      console.error('Erro ao buscar mensagens:', messageError)
+      console.error('❌ [GET /api/chat] Erro ao buscar mensagens:', messageError)
       // Se der erro, retornar array vazio
       messages = []
     }
@@ -202,19 +216,20 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedMessages)
   } catch (error: any) {
-    console.error('❌ Erro ao buscar mensagens:', error)
+    console.error('❌ [GET /api/chat] Erro ao buscar mensagens:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erro específico de prepared statement
     if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
-      console.error('❌ Erro de prepared statement - possivelmente problema de conexão')
+      console.error('❌ [GET /api/chat] Erro de prepared statement - possivelmente problema de conexão')
       return NextResponse.json([])
     }
 
     // Erros de conexão do Prisma
-    if (
+    const isConnectionError = 
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
@@ -224,12 +239,14 @@ export async function GET(request: NextRequest) {
       error.message?.includes('Can\'t reach database server') ||
       error.message?.includes('Connection') ||
       error.message?.includes('timeout')
-    ) {
-      console.warn('❌ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([])
+
+    if (isConnectionError) {
+      console.warn('⚠️ [GET /api/chat] Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([], { status: 503 })
     }
 
     // Sempre retornar array vazio em caso de erro para não quebrar o frontend
+    console.warn('⚠️ [GET /api/chat] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([])
   }
 }

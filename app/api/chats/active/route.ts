@@ -10,9 +10,16 @@ export const dynamic = 'force-dynamic'
 // - phone: telefone do cliente (retorna chats do cliente)
 // - all: true (retorna todos os chats ativos - para dashboard)
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/chats/active] Iniciando busca de chats ativos...')
+  
   try {
     const phone = request.nextUrl.searchParams.get('phone')
     const all = request.nextUrl.searchParams.get('all')
+
+    console.log('📋 [GET /api/chats/active] Parâmetros:', {
+      phone: phone?.substring(0, 10) + '...',
+      all,
+    })
 
     if (all === 'true') {
       // Dashboard - retornar todos os chats ativos (negociações)
@@ -32,6 +39,8 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { updatedAt: 'desc' },
       })
+
+      console.log(`✅ [GET /api/chats/active] Encontradas ${negotiations.length} negociações ativas`)
 
       const chats = negotiations.map(neg => ({
         type: 'negotiation',
@@ -58,6 +67,7 @@ export async function GET(request: NextRequest) {
       })
 
       if (!user) {
+        console.warn('⚠️ [GET /api/chats/active] Usuário não encontrado. Retornando array vazio.')
         return NextResponse.json({ chats: [] })
       }
 
@@ -78,6 +88,8 @@ export async function GET(request: NextRequest) {
         orderBy: { updatedAt: 'desc' },
       })
 
+      console.log(`✅ [GET /api/chats/active] Encontradas ${negotiations.length} negociações para o cliente`)
+
       const chats = negotiations.map(neg => ({
         type: 'negotiation',
         referenceId: neg.id,
@@ -95,27 +107,34 @@ export async function GET(request: NextRequest) {
     }
 
     // Sem filtro - retornar lista vazia
+    console.warn('⚠️ [GET /api/chats/active] Sem filtros. Retornando array vazio.')
     return NextResponse.json({ chats: [] })
   } catch (error: any) {
-    console.error('❌ Erro ao buscar chats ativos:', error)
+    console.error('❌ [GET /api/chats/active] Erro ao buscar chats ativos:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão do Prisma
-    if (
+    const isConnectionError = 
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
-      error.name === 'PrismaClientInitializationError'
-    ) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
-      return NextResponse.json({ chats: [] })
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
+      console.warn('⚠️ [GET /api/chats/active] Banco indisponível. Retornando array vazio.')
+      return NextResponse.json({ chats: [] }, { status: 503 })
     }
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar chats ativos' },
-      { status: 500 }
-    )
+    // SEMPRE retornar { chats: [] } em caso de erro (não objeto de erro)
+    console.warn('⚠️ [GET /api/chats/active] Erro desconhecido. Retornando array vazio.')
+    return NextResponse.json({ chats: [] })
   }
 }
 

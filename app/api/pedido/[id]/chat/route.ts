@@ -15,6 +15,11 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
     
+    console.log('📋 [GET /api/pedido/[id]/chat] Buscando mensagens do pedido:', {
+      orderId: id,
+      hasCustomerName: !!customerName,
+    })
+    
     // Buscar pedido e mensagens em uma única query para evitar problemas com prepared statements
     const order = await prisma.order.findUnique({
       where: { id },
@@ -26,6 +31,7 @@ export async function GET(
     })
 
     if (!order) {
+      console.warn('⚠️ [GET /api/pedido/[id]/chat] Pedido não encontrado:', id)
       return NextResponse.json({
         orderId: id,
         customerName: '',
@@ -39,6 +45,10 @@ export async function GET(
       const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
       
       if (normalizedCustomerName !== normalizedOrderName) {
+        console.warn('⚠️ [GET /api/pedido/[id]/chat] Acesso negado:', {
+          provided: normalizedCustomerName,
+          expected: normalizedOrderName,
+        })
         return NextResponse.json(
           { error: 'Acesso negado. Este pedido não pertence a você.' },
           { status: 403 }
@@ -55,32 +65,34 @@ export async function GET(
       senderName: msg.senderName,
     }))
 
+    console.log(`✅ [GET /api/pedido/[id]/chat] Retornando ${formattedMessages.length} mensagens`)
+
     return NextResponse.json({
       orderId: id,
       customerName: order.customerName,
       messages: formattedMessages,
     })
   } catch (error: any) {
-    console.error('❌ Erro ao buscar mensagens do pedido:', error)
+    console.error('❌ [GET /api/pedido/[id]/chat] Erro ao buscar mensagens do pedido:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
+    console.error('Error stack:', error.stack?.substring(0, 500))
     
     // Erro específico de prepared statement - pode ser problema de conexão
     if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
-      console.error('❌ Erro de prepared statement - possivelmente problema de conexão ou Prisma Client desatualizado')
+      console.error('❌ [GET /api/pedido/[id]/chat] Erro de prepared statement - possivelmente problema de conexão ou Prisma Client desatualizado')
       // Retornar resposta vazia mas válida
       return NextResponse.json({
         orderId: orderId || '',
         customerName: '',
         messages: [],
-        error: 'Erro temporário. Tente novamente.',
       }, { status: 200 })
     }
     
     // Erro de tabela não encontrada
     if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('order_messages')) {
-      console.error('❌ Tabela order_messages não existe')
+      console.error('❌ [GET /api/pedido/[id]/chat] Tabela order_messages não existe')
       return NextResponse.json({
         orderId: orderId || '',
         customerName: '',
@@ -88,12 +100,26 @@ export async function GET(
       }, { status: 200 })
     }
     
-    // Sempre retornar 200 com array vazio para não quebrar o frontend
+    // Erros de conexão
+    const isConnectionError = 
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.code === 'P1002' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+
+    if (isConnectionError) {
+      console.warn('⚠️ [GET /api/pedido/[id]/chat] Erro de conexão. Retornando array vazio.')
+    }
+    
+    // Sempre retornar 200 com estrutura válida para não quebrar o frontend
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
       messages: [],
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     }, { status: 200 })
   }
 }

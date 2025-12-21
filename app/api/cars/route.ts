@@ -36,10 +36,17 @@ async function retryQuery<T>(
 }
 
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/cars] Iniciando busca de carros...')
+  
   try {
     const searchParams = request.nextUrl.searchParams
     const category = searchParams.get('category')
     const available = searchParams.get('available') !== 'false'
+
+    console.log('📋 [GET /api/cars] Parâmetros:', {
+      category,
+      available,
+    })
 
     const where: any = {}
 
@@ -60,12 +67,15 @@ export async function GET(request: NextRequest) {
       })
     )
 
+    console.log(`✅ [GET /api/cars] Encontrados ${Array.isArray(cars) ? cars.length : 0} carros`)
+
     return NextResponse.json(Array.isArray(cars) ? cars : [])
   } catch (error: any) {
-    console.error('Erro ao buscar carros:', error)
+    console.error('❌ [GET /api/cars] Erro ao buscar carros:', error)
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão - retornar array vazio
     const isConnectionError = 
@@ -79,11 +89,11 @@ export async function GET(request: NextRequest) {
       error.message?.includes('timeout')
 
     if (isConnectionError) {
-      console.warn('⚠️ Erro de conexão com o banco. Retornando array vazio.')
+      console.warn('⚠️ [GET /api/cars] Erro de conexão com o banco. Retornando array vazio.')
       return NextResponse.json([], { status: 503 })
     }
 
-    console.warn('Erro ao buscar carros. Retornando array vazio.')
+    console.warn('⚠️ [GET /api/cars] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([])
   }
 }

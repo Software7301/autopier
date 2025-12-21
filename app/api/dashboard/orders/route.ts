@@ -49,10 +49,17 @@ async function retryQuery<T>(
 }
 
 export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/dashboard/orders] Iniciando busca de pedidos...')
+  
   try {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
     const search = searchParams.get('search')
+
+    console.log('📋 [GET /api/dashboard/orders] Parâmetros:', {
+      status,
+      search: search?.substring(0, 20) + '...',
+    })
 
     // Construir filtro where
     const where: any = {}
@@ -88,6 +95,8 @@ export async function GET(request: NextRequest) {
       })
     )
 
+    console.log(`✅ [GET /api/dashboard/orders] Encontrados ${orders.length} pedidos`)
+
     const formattedOrders = orders.map(order => ({
       id: order.id,
       cliente: order.customerName,
@@ -105,9 +114,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedOrders)
   } catch (error: any) {
-    console.error('❌ Erro ao buscar pedidos:', error)
+    console.error('❌ [GET /api/dashboard/orders] Erro ao buscar pedidos:', error)
     console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão do Prisma
     const isConnectionError = 
@@ -121,11 +132,11 @@ export async function GET(request: NextRequest) {
       error.message?.includes('timeout')
 
     if (isConnectionError) {
-      console.warn('⚠️ Banco indisponível. Retornando array vazio.')
+      console.warn('⚠️ [GET /api/dashboard/orders] Banco indisponível. Retornando array vazio.')
       return NextResponse.json([], { status: 503 })
     }
 
-    console.warn('Erro ao buscar pedidos. Retornando array vazio.')
+    console.warn('⚠️ [GET /api/dashboard/orders] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([])
   }
 }
