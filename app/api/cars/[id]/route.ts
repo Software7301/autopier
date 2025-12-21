@@ -10,25 +10,37 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let carId = ''
   try {
     const { id } = await params
+    carId = id
+    console.log('🚗 [Cars API] Buscando carro:', id)
     
     const car = await prisma.car.findUnique({
       where: { id },
     })
     
     if (!car) {
+      console.error('❌ [Cars API] Veículo não encontrado:', id)
       return NextResponse.json(
         { error: 'Veículo não encontrado' },
         { status: 404 }
       )
     }
 
+    console.log('✅ [Cars API] Carro encontrado:', car.name)
     return NextResponse.json(car)
-  } catch (error) {
-    console.error('Erro ao buscar veículo:', error)
+  } catch (error: any) {
+    console.error('❌ [Cars API] Erro ao buscar veículo:', carId)
+    console.error('Error code:', error.code)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    
     return NextResponse.json(
-      { error: 'Erro ao buscar veículo' },
+      { 
+        error: 'Erro ao buscar veículo',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

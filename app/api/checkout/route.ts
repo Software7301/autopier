@@ -16,6 +16,13 @@ function validatePhone(phone: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+    console.log('📦 [Checkout] Dados recebidos:', {
+      carId: body.carId,
+      customerName: body.customerName,
+      hasRg: !!body.customerRg,
+      hasPhone: !!body.customerPhone,
+      paymentMethod: body.paymentMethod,
+    })
 
     const {
       carId,
@@ -29,22 +36,27 @@ export async function POST(req: Request) {
     } = body
 
     if (!carId) {
+      console.error('❌ [Checkout] Carro não informado')
       return NextResponse.json({ error: 'Carro não informado' }, { status: 400 })
     }
 
     if (!customerName?.trim()) {
+      console.error('❌ [Checkout] Nome não informado')
       return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
     }
 
-    if (!validateRg(customerRg)) {
-      return NextResponse.json({ error: 'RG inválido' }, { status: 400 })
+    if (!customerRg || !validateRg(customerRg)) {
+      console.error('❌ [Checkout] RG inválido:', customerRg)
+      return NextResponse.json({ error: 'RG inválido. O RG deve ter exatamente 6 dígitos.' }, { status: 400 })
     }
 
-    if (!validatePhone(customerPhone)) {
-      return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 })
+    if (!customerPhone || !validatePhone(customerPhone)) {
+      console.error('❌ [Checkout] Telefone inválido:', customerPhone)
+      return NextResponse.json({ error: 'Telefone inválido. Mínimo 6 dígitos.' }, { status: 400 })
     }
 
-    if (!Object.values(PaymentMethod).includes(paymentMethod)) {
+    if (!paymentMethod || !Object.values(PaymentMethod).includes(paymentMethod)) {
+      console.error('❌ [Checkout] Forma de pagamento inválida:', paymentMethod)
       return NextResponse.json({ error: 'Forma de pagamento inválida' }, { status: 400 })
     }
 
@@ -53,19 +65,33 @@ export async function POST(req: Request) {
     })
 
     if (!car) {
+      console.error('❌ [Checkout] Carro não encontrado:', carId)
       return NextResponse.json({ error: 'Carro não encontrado' }, { status: 404 })
     }
 
     if (!car.available) {
+      console.error('❌ [Checkout] Carro indisponível:', carId)
       return NextResponse.json({ error: 'Carro indisponível' }, { status: 400 })
     }
+
+    const normalizedRg = customerRg.replace(/\D/g, '')
+    const normalizedPhone = customerPhone.replace(/\D/g, '')
+
+    console.log('✅ [Checkout] Criando pedido...', {
+      carId,
+      customerName: customerName.trim(),
+      rgLength: normalizedRg.length,
+      phoneLength: normalizedPhone.length,
+      paymentMethod,
+      totalPrice: Number(totalPrice),
+    })
 
     const order = await prisma.order.create({
       data: {
         carId,
         customerName: customerName.trim(),
-        customerRg: customerRg.replace(/\D/g, ''),
-        customerPhone: customerPhone.replace(/\D/g, ''),
+        customerRg: normalizedRg,
+        customerPhone: normalizedPhone,
         paymentMethod,
         totalPrice: Number(totalPrice),
         installments:
@@ -76,6 +102,8 @@ export async function POST(req: Request) {
         status: OrderStatus.PENDING,
       },
     })
+
+    console.log('✅ [Checkout] Pedido criado com sucesso:', order.id)
 
     return NextResponse.json({
       success: true,
