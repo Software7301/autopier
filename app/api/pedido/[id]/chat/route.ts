@@ -15,9 +15,14 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
     
-    // Primeiro, buscar o pedido sem as mensagens para validar acesso
+    // Buscar pedido e mensagens em uma única query para evitar problemas com prepared statements
     const order = await prisma.order.findUnique({
       where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     })
 
     if (!order) {
@@ -41,25 +46,8 @@ export async function GET(
       }
     }
 
-    // Buscar mensagens separadamente para evitar erro se a tabela não existir
-    let messages: any[] = []
-    try {
-      const orderWithMessages = await prisma.order.findUnique({
-        where: { id },
-        include: {
-          messages: {
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-      })
-      messages = orderWithMessages?.messages || []
-    } catch (messageError: any) {
-      console.error('Erro ao buscar mensagens (tabela pode não existir):', messageError)
-      // Se der erro ao buscar mensagens, retornar array vazio
-      messages = []
-    }
-
-    const formattedMessages = messages.map(msg => ({
+    // Formatar mensagens (pode estar vazio se a tabela não existir ou não houver mensagens)
+    const formattedMessages = (order.messages || []).map(msg => ({
       id: msg.id,
       content: msg.content,
       createdAt: msg.createdAt.toISOString(),
@@ -77,6 +65,28 @@ export async function GET(
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
+    
+    // Erro específico de prepared statement - pode ser problema de conexão
+    if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
+      console.error('❌ Erro de prepared statement - possivelmente problema de conexão ou Prisma Client desatualizado')
+      // Retornar resposta vazia mas válida
+      return NextResponse.json({
+        orderId: orderId || '',
+        customerName: '',
+        messages: [],
+        error: 'Erro temporário. Tente novamente.',
+      }, { status: 200 })
+    }
+    
+    // Erro de tabela não encontrada
+    if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('order_messages')) {
+      console.error('❌ Tabela order_messages não existe')
+      return NextResponse.json({
+        orderId: orderId || '',
+        customerName: '',
+        messages: [],
+      }, { status: 200 })
+    }
     
     // Sempre retornar 200 com array vazio para não quebrar o frontend
     return NextResponse.json({
