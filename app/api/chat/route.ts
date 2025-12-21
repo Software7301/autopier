@@ -83,12 +83,51 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 })
   } catch (error: any) {
-    console.error('Erro ao enviar mensagem:', error)
+    console.error('❌ Erro ao enviar mensagem:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
+
+    // Erro específico de prepared statement
+    if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
+      console.error('❌ Erro de prepared statement - possivelmente problema de conexão')
+      return NextResponse.json(
+        { error: 'Erro temporário. Tente novamente.' },
+        { status: 500 }
+      )
+    }
+
+    // Erros de conexão do Prisma
+    if (
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.code === 'P1002' ||
+      error.code === 'P1003' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
+    ) {
+      return NextResponse.json(
+        { error: 'Erro de conexão com o banco de dados. Tente novamente.' },
+        { status: 500 }
+      )
+    }
+
+    // Erros de validação
+    if (error.code === 'P2003' || error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Negociação ou usuário não encontrado' },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json(
-      { error: 'Erro ao enviar mensagem' },
+      { 
+        error: 'Erro ao enviar mensagem',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -107,6 +146,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Buscar negociação e mensagens separadamente para evitar problemas com prepared statements
     const negotiation = await prisma.negotiation.findUnique({
       where: { id: negotiationId },
       include: {
@@ -133,13 +173,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const messages = await prisma.message.findMany({
-      where: { negotiationId },
-      include: {
-        sender: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    })
+    // Buscar mensagens em query separada para evitar conflitos de prepared statements
+    let messages: any[] = []
+    try {
+      messages = await prisma.message.findMany({
+        where: { negotiationId },
+        include: {
+          sender: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+    } catch (messageError: any) {
+      console.error('Erro ao buscar mensagens:', messageError)
+      // Se der erro, retornar array vazio
+      messages = []
+    }
 
     const formattedMessages = messages.map(msg => ({
       id: msg.id,
@@ -154,23 +202,34 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedMessages)
   } catch (error: any) {
-    console.error('Erro ao buscar mensagens:', error)
+    console.error('❌ Erro ao buscar mensagens:', error)
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
 
+    // Erro específico de prepared statement
+    if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
+      console.error('❌ Erro de prepared statement - possivelmente problema de conexão')
+      return NextResponse.json([])
+    }
+
+    // Erros de conexão do Prisma
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
       error.code === 'P1017' ||
-      error.name === 'PrismaClientInitializationError'
+      error.code === 'P1002' ||
+      error.code === 'P1003' ||
+      error.name === 'PrismaClientInitializationError' ||
+      error.message?.includes('Can\'t reach database server') ||
+      error.message?.includes('Connection') ||
+      error.message?.includes('timeout')
     ) {
-      console.warn('Banco indisponível. Retornando array vazio.')
+      console.warn('❌ Banco indisponível. Retornando array vazio.')
       return NextResponse.json([])
     }
 
-    return NextResponse.json(
-      { error: 'Erro ao buscar mensagens' },
-      { status: 500 }
-    )
+    // Sempre retornar array vazio em caso de erro para não quebrar o frontend
+    return NextResponse.json([])
   }
 }
