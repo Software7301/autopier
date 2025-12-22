@@ -5,6 +5,25 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// GET - Informação sobre a rota
+export async function GET(req: Request) {
+  return NextResponse.json({
+    message: 'Endpoint de checkout - criar pedido',
+    method: 'POST',
+    requiredFields: ['carId', 'customerName', 'customerRg', 'customerPhone', 'paymentMethod', 'totalPrice'],
+    optionalFields: ['installments', 'selectedColor'],
+    example: {
+      carId: 'abc123',
+      customerName: 'João Silva',
+      customerRg: '123456',
+      customerPhone: '11999999999',
+      paymentMethod: 'PIX',
+      totalPrice: 50000,
+      selectedColor: 'Branco'
+    }
+  })
+}
+
 function validateRg(rg: string) {
   return /^\d{6}$/.test(rg.replace(/\D/g, ''))
 }

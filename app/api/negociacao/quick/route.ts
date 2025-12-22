@@ -6,6 +6,21 @@ import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// GET - Informação sobre a rota
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    message: 'Endpoint para criar negociação rápida',
+    method: 'POST',
+    requiredFields: ['carId', 'customerPhone'],
+    optionalFields: ['customerName'],
+    example: {
+      carId: 'abc123',
+      customerPhone: '11999999999',
+      customerName: 'João Silva'
+    }
+  })
+}
+
 // POST - Criar ou reutilizar negociação rapidamente (apenas carId e telefone)
 export async function POST(request: NextRequest) {
   try {

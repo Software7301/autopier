@@ -148,10 +148,14 @@ export async function GET(request: NextRequest) {
 
     if (!negotiationId) {
       console.warn('⚠️ [GET /api/chat] ID da negociação não fornecido')
-      return NextResponse.json(
-        { error: 'ID da negociação é obrigatório' },
-        { status: 400 }
-      )
+      return NextResponse.json({
+        message: 'Endpoint de chat - buscar mensagens de uma negociação',
+        method: 'GET',
+        requiredParams: ['negotiationId'],
+        optionalParams: ['customerName'],
+        example: '/api/chat?negotiationId=abc123&customerName=João Silva',
+        error: 'ID da negociação é obrigatório'
+      }, { status: 400 })
     }
 
     // Buscar negociação e mensagens separadamente para evitar problemas com prepared statements
