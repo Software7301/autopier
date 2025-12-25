@@ -163,9 +163,21 @@ export async function POST(
       )
     }
 
-    if (sender === 'funcionario') {
-      console.log('✅ [Chat POST] Mensagem de funcionário - sem validação de nome')
+    // Validar sender
+    const validSender = sender === 'funcionario' || sender === 'cliente' ? sender : 'cliente'
+    
+    if (validSender === 'funcionario') {
+      // Mensagem de funcionário - garantir que senderName existe
+      if (!senderName || !senderName.trim()) {
+        console.error('❌ [Chat POST] senderName obrigatório para funcionário')
+        return NextResponse.json(
+          { error: 'Nome do remetente é obrigatório' },
+          { status: 400 }
+        )
+      }
+      console.log('✅ [Chat POST] Mensagem de funcionário:', senderName)
     } else {
+      // Mensagem de cliente - validar nome
       if (!customerName || !customerName.trim()) {
         console.error('❌ [Chat POST] Nome do cliente não fornecido')
         return NextResponse.json(
@@ -189,19 +201,24 @@ export async function POST(
       }
     }
 
+    // Garantir que senderName está definido
+    const finalSenderName = validSender === 'funcionario' 
+      ? (senderName?.trim() || 'AutoPier')
+      : (customerName?.trim() || order.customerName || 'Cliente')
+
     console.log('✅ [Chat POST] Criando mensagem...', {
       orderId: id,
       contentLength: content.trim().length,
-      sender: sender || 'cliente',
-      senderName: senderName || customerName || 'Sistema',
+      sender: validSender,
+      senderName: finalSenderName,
     })
 
     const message = await prisma.orderMessage.create({
       data: {
         orderId: id,
         content: content.trim(),
-        sender: sender || 'cliente',
-        senderName: senderName || customerName || 'Sistema',
+        sender: validSender,
+        senderName: finalSenderName,
       },
     })
 
@@ -270,11 +287,25 @@ export async function POST(
       )
     }
 
+    // Log detalhado do erro
+    console.error('❌ [Chat POST] Erro desconhecido:', {
+      code: error.code,
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.substring(0, 1000),
+      orderId,
+      sender: body?.sender,
+      hasSenderName: !!body?.senderName,
+    })
+
     return NextResponse.json(
       { 
         error: 'Erro ao enviar mensagem',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        code: error.code || 'UNKNOWN_ERROR'
+        code: error.code || 'UNKNOWN_ERROR',
+        hint: error.message?.includes('order_messages') 
+          ? 'A tabela order_messages pode não existir. Execute: npx prisma db push'
+          : undefined
       },
       { status: 500 }
     )
