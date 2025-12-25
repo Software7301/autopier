@@ -151,8 +151,14 @@ export async function POST(
       )
     }
 
+    // Verificar se o pedido existe e está acessível
     const order = await prisma.order.findUnique({
       where: { id },
+      select: {
+        id: true,
+        customerName: true,
+        status: true,
+      },
     })
 
     if (!order) {
@@ -162,6 +168,12 @@ export async function POST(
         { status: 404 }
       )
     }
+
+    console.log('✅ [Chat POST] Pedido encontrado:', {
+      orderId: order.id,
+      customerName: order.customerName,
+      status: order.status,
+    })
 
     // Validar sender
     const validSender = sender === 'funcionario' || sender === 'cliente' ? sender : 'cliente'
@@ -213,16 +225,26 @@ export async function POST(
       senderName: finalSenderName,
     })
 
-    const message = await prisma.orderMessage.create({
-      data: {
-        orderId: id,
-        content: content.trim(),
-        sender: validSender,
-        senderName: finalSenderName,
-      },
-    })
-
-    console.log('✅ [Chat POST] Mensagem criada com sucesso:', message.id)
+    let message
+    try {
+      message = await prisma.orderMessage.create({
+        data: {
+          orderId: id,
+          content: content.trim(),
+          sender: validSender,
+          senderName: finalSenderName,
+        },
+      })
+      console.log('✅ [Chat POST] Mensagem criada com sucesso:', message.id)
+    } catch (createError: any) {
+      console.error('❌ [Chat POST] Erro ao criar mensagem no Prisma:', {
+        code: createError.code,
+        name: createError.name,
+        message: createError.message,
+        meta: createError.meta,
+      })
+      throw createError // Re-throw para ser capturado pelo catch externo
+    }
 
     return NextResponse.json({
       id: message.id,
