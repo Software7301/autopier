@@ -169,13 +169,56 @@ export async function POST(request: NextRequest) {
 
     console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
-    // Criar veículo diretamente (Prisma gerencia conexões automaticamente)
-    // Similar a outras rotas que funcionam como /api/negociacao e /api/checkout
-    const car = await prisma.car.create({
-      data: carData,
-    })
+    // Verificar se DATABASE_URL está disponível
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ [POST /api/cars] DATABASE_URL não encontrada!')
+      return NextResponse.json(
+        {
+          error: 'Configuração do banco de dados não encontrada',
+          code: 'DATABASE_URL_MISSING',
+        },
+        { status: 500 }
+      )
+    }
 
-    console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
+    console.log('🔌 [POST /api/cars] Tentando criar veículo no banco...')
+    console.log('🔌 [POST /api/cars] DATABASE_URL host:', process.env.DATABASE_URL?.match(/@([^:]+)/)?.[1] || 'não encontrado')
+
+    // Criar veículo com tratamento de erro específico
+    let car
+    try {
+      car = await prisma.car.create({
+        data: carData,
+      })
+      console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
+    } catch (createError: any) {
+      console.error('❌ [POST /api/cars] Erro na criação:', createError)
+      console.error('❌ [POST /api/cars] Error code:', createError.code)
+      console.error('❌ [POST /api/cars] Error name:', createError.name)
+      console.error('❌ [POST /api/cars] Error message:', createError.message)
+      
+      // Se for erro de conexão, tentar resetar e tentar novamente uma vez
+      if (isPrismaConnectionError(createError)) {
+        console.log('🔄 [POST /api/cars] Tentando resetar conexão e tentar novamente...')
+        try {
+          await resetPrismaConnection()
+          // Aguardar um pouco antes de tentar novamente
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Tentar novamente
+          car = await prisma.car.create({
+            data: carData,
+          })
+          console.log('✅ [POST /api/cars] Veículo criado com sucesso na segunda tentativa:', car.id)
+        } catch (retryError: any) {
+          console.error('❌ [POST /api/cars] Erro na segunda tentativa:', retryError)
+          throw retryError // Re-lançar para ser tratado pelo catch externo
+        }
+      } else {
+        // Se não for erro de conexão, re-lançar
+        throw createError
+      }
+    }
 
     return NextResponse.json(car, { status: 201 })
   } catch (error: any) {
