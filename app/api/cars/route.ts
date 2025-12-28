@@ -1,57 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, resetPrismaConnection } from '@/lib/prisma'
+import { retryQuery } from '@/lib/db-helpers'
+import { isPrismaConnectionError, isPreparedStatementError } from '@/lib/utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-// Função helper para retry de queries do Prisma
-async function retryQuery<T>(
-  queryFn: () => Promise<T>,
-  maxRetries = 3,
-  delay = 1000
-): Promise<T> {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await queryFn()
-    } catch (error: any) {
-      const isConnectionError = 
-        error.code === 'P1001' ||
-        error.code === 'P1000' ||
-        error.code === 'P1017' ||
-        error.code === 'P1002' ||
-        error.name === 'PrismaClientInitializationError' ||
-        error.message?.includes('Can\'t reach database server') ||
-        error.message?.includes('Connection') ||
-        error.message?.includes('timeout')
-
-      // Erro específico de prepared statement duplicado (42P05)
-      const isPreparedStatementError = 
-        error.message?.includes('prepared statement') ||
-        error.message?.includes('already exists') ||
-        error.message?.includes('42P05')
-
-      if (isPreparedStatementError && i < maxRetries - 1) {
-        console.warn(`⚠️ [Retry] Erro de prepared statement (tentativa ${i + 1}/${maxRetries}). Resetando conexão...`)
-        
-        // Resetar conexão do Prisma para limpar prepared statements
-        await resetPrismaConnection()
-        
-        // Aguardar um pouco antes de tentar novamente
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
-        
-        continue
-      }
-
-      if (isConnectionError && i < maxRetries - 1) {
-        console.warn(`⚠️ [Retry] Erro de conexão (tentativa ${i + 1}/${maxRetries}). Tentando novamente em ${delay}ms...`)
-        await new Promise(resolve => setTimeout(resolve, delay))
-        continue
-      }
-      throw error
-    }
-  }
-  throw new Error('Max retries exceeded')
-}
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/cars] Iniciando busca de carros...')
@@ -96,17 +49,7 @@ export async function GET(request: NextRequest) {
     console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erros de conexão - retornar array vazio
-    const isConnectionError = 
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('timeout')
-
-    if (isConnectionError) {
+    if (isPrismaConnectionError(error)) {
       console.warn('⚠️ [GET /api/cars] Erro de conexão com o banco. Retornando array vazio.')
       return NextResponse.json([], { status: 200 })
     }
@@ -244,15 +187,9 @@ export async function POST(request: NextRequest) {
     console.error('Error stack:', error.stack?.substring(0, 1000))
     console.error('Error meta:', error.meta)
 
-    // Erro específico de prepared statement duplicado (42P05)
-    const isPreparedStatementError = 
-      error.message?.includes('prepared statement') ||
-      error.message?.includes('already exists') ||
-      error.message?.includes('42P05')
-
-    if (isPreparedStatementError) {
+    // Erro específico de prepared statement duplicado
+    if (isPreparedStatementError(error)) {
       console.error('❌ [POST /api/cars] Erro de prepared statement duplicado após todas as tentativas')
-      // Resetar conexão para próxima requisição
       await resetPrismaConnection()
       return NextResponse.json(
         {
@@ -265,21 +202,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Erros de conexão do Prisma
-    const isConnectionError = 
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.code === 'P1003' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Environment variable not found') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('SSL') ||
-      error.message?.includes('timeout') ||
-      error.message?.includes('certificate')
-
-    if (isConnectionError) {
+    if (isPrismaConnectionError(error)) {
       console.error('❌ [POST /api/cars] Erro de conexão com banco de dados')
       return NextResponse.json(
         {

@@ -153,3 +153,34 @@ export const negotiationStatusLabels: Record<string, string> = {
   CLOSED: 'Fechada',
 }
 
+/**
+ * Verifica se um erro é um erro de conexão do Prisma
+ */
+export function isPrismaConnectionError(error: any): boolean {
+  return (
+    error.code === 'P1001' ||
+    error.code === 'P1000' ||
+    error.code === 'P1017' ||
+    error.code === 'P1002' ||
+    error.code === 'P1003' ||
+    error.name === 'PrismaClientInitializationError' ||
+    error.message?.includes("Can't reach database server") ||
+    error.message?.includes('Connection') ||
+    error.message?.includes('timeout') ||
+    error.message?.includes('SSL') ||
+    error.message?.includes('certificate')
+  )
+}
+
+/**
+ * Verifica se um erro é um erro de prepared statement duplicado
+ */
+export function isPreparedStatementError(error: any): boolean {
+  return (
+    error.message?.includes('prepared statement') ||
+    error.message?.includes('already exists') ||
+    error.message?.includes('42P05') ||
+    error.message?.includes('bind message supplies')
+  )
+}
+

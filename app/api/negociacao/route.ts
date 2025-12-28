@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NegotiationType, NegotiationStatus } from '@prisma/client'
 import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
+import { isPrismaConnectionError } from '@/lib/utils'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -149,18 +149,7 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erros de conexão do Prisma
-    const isConnectionError = 
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('timeout')
-
-    if (isConnectionError) {
+    if (isPrismaConnectionError(error)) {
       console.warn('⚠️ [GET /api/negociacao] Banco indisponível. Retornando array vazio.')
       return NextResponse.json([], { status: 200 })
     }

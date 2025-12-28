@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NegotiationStatus } from '@prisma/client'
 import { getOrCreateSeller, getOrCreateBuyer } from '@/lib/users'
+import { isPrismaConnectionError, isPreparedStatementError } from '@/lib/utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -227,24 +228,12 @@ export async function GET(request: NextRequest) {
     console.error('Error stack:', error.stack?.substring(0, 500))
 
     // Erro específico de prepared statement
-    if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
-      console.error('❌ [GET /api/chat] Erro de prepared statement - possivelmente problema de conexão')
-      return NextResponse.json([])
+    if (isPreparedStatementError(error)) {
+      console.error('❌ [GET /api/chat] Erro de prepared statement')
+      return NextResponse.json([], { status: 200 })
     }
 
-    // Erros de conexão do Prisma
-    const isConnectionError = 
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.code === 'P1003' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('timeout')
-
-    if (isConnectionError) {
+    if (isPrismaConnectionError(error)) {
       console.warn('⚠️ [GET /api/chat] Banco indisponível. Retornando array vazio.')
       return NextResponse.json([], { status: 200 })
     }

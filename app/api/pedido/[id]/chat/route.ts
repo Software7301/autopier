@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { isPrismaConnectionError, isPreparedStatementError } from '@/lib/utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -79,10 +80,9 @@ export async function GET(
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
     
-    // Erro específico de prepared statement - pode ser problema de conexão
-    if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
-      console.error('❌ [GET /api/pedido/[id]/chat] Erro de prepared statement - possivelmente problema de conexão ou Prisma Client desatualizado')
-      // Retornar resposta vazia mas válida
+    // Erro específico de prepared statement
+    if (isPreparedStatementError(error)) {
+      console.error('❌ [GET /api/pedido/[id]/chat] Erro de prepared statement')
       return NextResponse.json({
         orderId: orderId || '',
         customerName: '',
@@ -101,17 +101,7 @@ export async function GET(
     }
     
     // Erros de conexão
-    const isConnectionError = 
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection') ||
-      error.message?.includes('timeout')
-
-    if (isConnectionError) {
+    if (isPrismaConnectionError(error)) {
       console.warn('⚠️ [GET /api/pedido/[id]/chat] Erro de conexão. Retornando array vazio.')
     }
     
@@ -274,15 +264,7 @@ export async function POST(
     }
 
     // Erros de conexão do Prisma
-    if (
-      error.code === 'P1001' ||
-      error.code === 'P1000' ||
-      error.code === 'P1017' ||
-      error.code === 'P1002' ||
-      error.name === 'PrismaClientInitializationError' ||
-      error.message?.includes('Can\'t reach database server') ||
-      error.message?.includes('Connection')
-    ) {
+    if (isPrismaConnectionError(error)) {
       console.error('❌ [Chat POST] Erro de conexão com banco de dados')
       return NextResponse.json(
         { 
