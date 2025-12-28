@@ -88,13 +88,11 @@ export const prisma =
   })
 
 // Cache global para evitar múltiplas instâncias
+// Em ambiente serverless (Vercel), o globalThis persiste dentro da mesma execução
 if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma
 }
 
-// Em produção, garantir desconexão adequada
-if (process.env.NODE_ENV === 'production') {
-  process.on('beforeExit', async () => {
-    await prisma.$disconnect()
-  })
-}
+// NOTA: Não usar $disconnect() manual em serverless
+// O pooler gerencia conexões automaticamente e desconectar manualmente pode causar
+// problemas em requisições subsequentes na mesma execução serverless
