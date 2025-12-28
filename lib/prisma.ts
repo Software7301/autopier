@@ -9,31 +9,36 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 // Função helper para preparar DATABASE_URL para serverless
-// IMPORTANTE: Para evitar erros de prepared statements duplicados em serverless,
-// vamos usar o pooler do Supabase em modo transaction (porta 6543) se disponível
+// IMPORTANTE: Por padrão, usar conexão direta (porta 5432) que é mais confiável
+// O pooler (porta 6543) pode ser usado se explicitamente configurado via USE_POOLER=true
 function prepareDatabaseUrl(url: string | undefined): string | undefined {
   if (!url) return url
   
   let modifiedUrl = url
   
+  // Só usar pooler se explicitamente solicitado via variável de ambiente
+  const usePooler = process.env.USE_POOLER === 'true'
+  
   // Se for Supabase e estiver usando porta 5432 (direct connection),
-  // tentar usar o pooler em modo transaction (porta 6543) que não suporta prepared statements
-  // Isso evita o erro "prepared statement already exists"
-  if (modifiedUrl.includes('supabase.co') && modifiedUrl.includes(':5432')) {
+  // e USE_POOLER=true, tentar usar o pooler em modo transaction (porta 6543)
+  if (usePooler && modifiedUrl.includes('supabase.co') && modifiedUrl.includes(':5432')) {
     // Substituir porta 5432 por 6543 para usar pooler em modo transaction
     modifiedUrl = modifiedUrl.replace(':5432', ':6543')
-    console.log('✅ Usando Supabase pooler (porta 6543) para evitar prepared statements')
+    console.log('✅ Usando Supabase pooler (porta 6543) - configurado via USE_POOLER=true')
+    
+    // Adicionar pgbouncer=true se não existir (para pooler do Supabase)
+    if (!modifiedUrl.includes('pgbouncer=')) {
+      const separator = modifiedUrl.includes('?') ? '&' : '?'
+      modifiedUrl = `${modifiedUrl}${separator}pgbouncer=true`
+    }
+  } else if (modifiedUrl.includes('supabase.co')) {
+    console.log('✅ Usando conexão direta do Supabase (porta 5432)')
   }
   
-  // Adicionar sslmode se não existir
+  // Adicionar sslmode se não existir (obrigatório para Supabase)
   if (!modifiedUrl.includes('sslmode=')) {
     const separator = modifiedUrl.includes('?') ? '&' : '?'
     modifiedUrl = `${modifiedUrl}${separator}sslmode=require`
-  }
-  
-  // Adicionar pgbouncer=true se não existir (para pooler do Supabase)
-  if (modifiedUrl.includes(':6543') && !modifiedUrl.includes('pgbouncer=')) {
-    modifiedUrl = `${modifiedUrl}&pgbouncer=true`
   }
   
   return modifiedUrl
@@ -56,13 +61,21 @@ if (originalDatabaseUrl) {
   // Se a URL foi modificada, atualizar process.env para o Prisma usar
   if (preparedDatabaseUrl && preparedDatabaseUrl !== originalDatabaseUrl) {
     process.env.DATABASE_URL = preparedDatabaseUrl
-    console.log('✅ DATABASE_URL configurada para ambiente serverless (SSL + connection pooling)')
+    // Log parcial da URL (ocultar senha por segurança)
+    const urlForLog = preparedDatabaseUrl.replace(/:[^:@]+@/, ':****@')
+    console.log('✅ DATABASE_URL configurada:', urlForLog.substring(0, 100) + '...')
+  } else if (preparedDatabaseUrl) {
+    // Log parcial mesmo se não foi modificada (para debug)
+    const urlForLog = preparedDatabaseUrl.replace(/:[^:@]+@/, ':****@')
+    console.log('✅ DATABASE_URL já está configurada:', urlForLog.substring(0, 100) + '...')
   }
+} else {
+  console.error('❌ DATABASE_URL não está configurada!')
 }
 
 // Configuração do Prisma Client para Vercel serverless
-// IMPORTANTE: Usar connection_limit=1 e pool_timeout=0 na DATABASE_URL
-// para evitar problemas de prepared statements duplicados em serverless
+// IMPORTANTE: Para Supabase, usar conexão direta (porta 5432) é mais confiável
+// O pooler (porta 6543) pode causar problemas de conexão em alguns casos
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
@@ -73,8 +86,7 @@ export const prisma =
       },
     },
     // Configurações adicionais para serverless
-    // Desabilitar query engine para evitar problemas de conexão
-    // O Prisma usará conexões diretas sem prepared statements persistentes
+    // O Prisma gerencia conexões automaticamente
   })
 
 // Em desenvolvimento, usar global para hot reload
