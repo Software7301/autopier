@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma, resetPrismaConnection } from '@/lib/prisma'
-import { retryQuery } from '@/lib/db-helpers'
-import { isPrismaConnectionError, isPreparedStatementError } from '@/lib/utils'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,14 +27,12 @@ export async function GET(request: NextRequest) {
       where.available = true
     }
 
-    const cars = await retryQuery(() =>
-      prisma.car.findMany({
-        where,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      })
-    )
+    const cars = await prisma.car.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
 
     console.log(`✅ [GET /api/cars] Encontrados ${Array.isArray(cars) ? cars.length : 0} carros`)
 
@@ -48,13 +44,8 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erros de conexão - retornar array vazio
-    if (isPrismaConnectionError(error)) {
-      console.warn('⚠️ [GET /api/cars] Erro de conexão com o banco. Retornando array vazio.')
-      return NextResponse.json([], { status: 200 })
-    }
-
-    console.warn('⚠️ [GET /api/cars] Erro desconhecido. Retornando array vazio.')
+    // Em caso de erro, retornar array vazio para não quebrar o frontend
+    console.warn('⚠️ [GET /api/cars] Erro ao buscar carros. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }
 }
@@ -169,107 +160,22 @@ export async function POST(request: NextRequest) {
 
     console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
-    // Verificar se DATABASE_URL está disponível
-    if (!process.env.DATABASE_URL) {
-      console.error('❌ [POST /api/cars] DATABASE_URL não encontrada!')
-      return NextResponse.json(
-        {
-          error: 'Configuração do banco de dados não encontrada',
-          code: 'DATABASE_URL_MISSING',
-        },
-        { status: 500 }
-      )
-    }
+    // Criar veículo - o pooler gerencia conexões automaticamente
+    const car = await prisma.car.create({
+      data: carData,
+    })
 
-    console.log('🔌 [POST /api/cars] Tentando criar veículo no banco...')
-    console.log('🔌 [POST /api/cars] DATABASE_URL host:', process.env.DATABASE_URL?.match(/@([^:]+)/)?.[1] || 'não encontrado')
-
-    // Criar veículo com tratamento de erro específico
-    let car
-    try {
-      car = await prisma.car.create({
-        data: carData,
-      })
-      console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
-    } catch (createError: any) {
-      console.error('❌ [POST /api/cars] Erro na criação:', createError)
-      console.error('❌ [POST /api/cars] Error code:', createError.code)
-      console.error('❌ [POST /api/cars] Error name:', createError.name)
-      console.error('❌ [POST /api/cars] Error message:', createError.message)
-      
-      // Se for erro de conexão, tentar resetar e tentar novamente uma vez
-      if (isPrismaConnectionError(createError)) {
-        console.log('🔄 [POST /api/cars] Tentando resetar conexão e tentar novamente...')
-        try {
-          await resetPrismaConnection()
-          // Aguardar um pouco antes de tentar novamente
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          // Tentar novamente
-          car = await prisma.car.create({
-            data: carData,
-          })
-          console.log('✅ [POST /api/cars] Veículo criado com sucesso na segunda tentativa:', car.id)
-        } catch (retryError: any) {
-          console.error('❌ [POST /api/cars] Erro na segunda tentativa:', retryError)
-          throw retryError // Re-lançar para ser tratado pelo catch externo
-        }
-      } else {
-        // Se não for erro de conexão, re-lançar
-        throw createError
-      }
-    }
+    console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
 
     return NextResponse.json(car, { status: 201 })
   } catch (error: any) {
     console.error('❌ [POST /api/cars] Erro ao criar veículo:', error)
     console.error('Error code:', error.code)
-    console.error('Error name:', error.name)
     console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack?.substring(0, 1000))
-    console.error('Error meta:', error.meta)
-
-    // Erro específico de prepared statement duplicado
-    if (isPreparedStatementError(error)) {
-      console.error('❌ [POST /api/cars] Erro de prepared statement duplicado após todas as tentativas')
-      await resetPrismaConnection()
-      return NextResponse.json(
-        {
-          error: 'Erro temporário ao criar veículo. Por favor, tente novamente em alguns segundos.',
-          code: 'PREPARED_STATEMENT_ERROR',
-          hint: 'Este é um erro temporário comum em ambientes serverless. Tente novamente.',
-        },
-        { status: 503 }
-      )
-    }
-
-    // Erros de conexão do Prisma
-    if (isPrismaConnectionError(error)) {
-      console.error('❌ [POST /api/cars] Erro de conexão com banco de dados')
-      console.error('DATABASE_URL configurada:', !!process.env.DATABASE_URL)
-      console.error('DATABASE_URL host:', process.env.DATABASE_URL?.match(/@([^:]+)/)?.[1] || 'não encontrado')
-      
-      // Tentar resetar conexão antes de retornar erro
-      try {
-        await resetPrismaConnection()
-      } catch (resetError) {
-        console.warn('⚠️ [POST /api/cars] Erro ao resetar conexão:', resetError)
-      }
-
-      return NextResponse.json(
-        {
-          error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-          code: error.code || error.name,
-        },
-        { status: 503 }
-      )
-    }
 
     // Erros de validação do Prisma
     if (error.code === 'P2002') {
       const field = error.meta?.target?.[0] || 'campo'
-      console.error('❌ [POST /api/cars] Dados duplicados:', field)
       return NextResponse.json(
         { error: `Veículo com ${field} duplicado` },
         { status: 409 }
@@ -277,7 +183,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (error.code === 'P2003') {
-      console.error('❌ [POST /api/cars] Foreign key constraint failed')
       return NextResponse.json(
         { error: 'Erro de validação: referência inválida' },
         { status: 400 }
@@ -290,9 +195,6 @@ export async function POST(request: NextRequest) {
         error: 'Erro ao criar veículo',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         code: error.code || 'UNKNOWN_ERROR',
-        hint: error.message?.includes('Invalid value') 
-          ? 'Verifique se todos os campos estão no formato correto'
-          : undefined
       },
       { status: 500 }
     )

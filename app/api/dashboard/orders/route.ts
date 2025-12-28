@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentMethod } from '@prisma/client'
-import { retryQuery } from '@/lib/db-helpers'
-import { isPrismaConnectionError } from '@/lib/utils'
 import { paymentLabels } from '@/lib/utils'
 
 export const runtime = 'nodejs'
@@ -46,18 +44,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Buscar pedidos com Prisma (com retry)
-    const orders = await retryQuery(() =>
-      prisma.order.findMany({
-        where,
-        include: {
-          car: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      })
-    )
+    // Buscar pedidos - o pooler gerencia conexões automaticamente
+    const orders = await prisma.order.findMany({
+      where,
+      include: {
+        car: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
 
     console.log(`✅ [GET /api/dashboard/orders] Encontrados ${orders.length} pedidos`)
 
@@ -84,13 +80,8 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erros de conexão do Prisma
-    if (isPrismaConnectionError(error)) {
-      console.warn('⚠️ [GET /api/dashboard/orders] Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([], { status: 200 })
-    }
-
-    console.warn('⚠️ [GET /api/dashboard/orders] Erro desconhecido. Retornando array vazio.')
+    // Em caso de erro, retornar array vazio para não quebrar o frontend
+    console.warn('⚠️ [GET /api/dashboard/orders] Erro ao buscar pedidos. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }
 }
