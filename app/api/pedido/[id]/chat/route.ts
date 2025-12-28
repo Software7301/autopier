@@ -129,10 +129,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   let orderId = ''
+  let body: any = null
   try {
     const { id } = await params
     orderId = id
-    const body = await request.json()
+    body = await request.json()
     const { content, sender, senderName, customerName } = body
 
     console.log('📨 [Chat POST] Recebendo mensagem:', {
