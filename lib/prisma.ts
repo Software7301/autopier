@@ -17,17 +17,22 @@ const globalForPrisma = globalThis as unknown as {
 function convertToPoolerUrl(url: string | undefined): string | undefined {
   if (!url) return url
 
-  // Se já está usando pooler, retornar como está
+  // Se já está usando pooler, garantir que tem os parâmetros necessários
   if (url.includes('.pooler.supabase.com') || url.includes(':6543')) {
-    // Garantir que tem os parâmetros necessários
     let poolerUrl = url
+    const hasParams = poolerUrl.includes('?')
+    const separator = hasParams ? '&' : '?'
+    
+    // Adicionar parâmetros obrigatórios se não existirem
     if (!poolerUrl.includes('pgbouncer=true')) {
-      const separator = poolerUrl.includes('?') ? '&' : '?'
       poolerUrl = `${poolerUrl}${separator}pgbouncer=true`
     }
     if (!poolerUrl.includes('sslmode=')) {
-      const separator = poolerUrl.includes('?') ? '&' : '?'
-      poolerUrl = `${poolerUrl}${separator}sslmode=require`
+      poolerUrl = `${poolerUrl}&sslmode=require`
+    }
+    // Adicionar connection_limit=1 para serverless (recomendado pelo Supabase)
+    if (!poolerUrl.includes('connection_limit=')) {
+      poolerUrl = `${poolerUrl}&connection_limit=1`
     }
     return poolerUrl
   }
@@ -45,7 +50,7 @@ function convertToPoolerUrl(url: string | undefined): string | undefined {
       
       // Adicionar parâmetros obrigatórios
       const separator = poolerUrl.includes('?') ? '&' : '?'
-      poolerUrl = `${poolerUrl}${separator}pgbouncer=true&sslmode=require`
+      poolerUrl = `${poolerUrl}${separator}pgbouncer=true&sslmode=require&connection_limit=1`
       
       console.log('✅ [Prisma] Convertido para Supabase Connection Pooler')
       return poolerUrl
