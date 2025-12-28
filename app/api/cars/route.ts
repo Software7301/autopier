@@ -169,11 +169,38 @@ export async function POST(request: NextRequest) {
 
     console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
+    // Verificar se DATABASE_URL está configurada
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ [POST /api/cars] DATABASE_URL não está configurada!')
+      return NextResponse.json(
+        {
+          error: 'Configuração do banco de dados não encontrada. Entre em contato com o suporte.',
+          code: 'DATABASE_URL_MISSING',
+        },
+        { status: 500 }
+      )
+    }
+
+    // Tentar conectar ao banco antes de executar a query
+    try {
+      await prisma.$connect()
+      console.log('✅ [POST /api/cars] Conexão com banco estabelecida')
+    } catch (connectError: any) {
+      console.error('❌ [POST /api/cars] Erro ao conectar ao banco:', connectError)
+      // Continuar mesmo com erro de conexão, o retryQuery vai tentar novamente
+    }
+
     // Usar retryQuery para criação também
-    const car = await retryQuery(() =>
-      prisma.car.create({
-        data: carData,
-      })
+    const car = await retryQuery(
+      () =>
+        prisma.car.create({
+          data: carData,
+        }),
+      {
+        maxRetries: 5,
+        delay: 2000,
+        resetOnPreparedStatementError: true,
+      }
     )
 
     console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
@@ -204,6 +231,16 @@ export async function POST(request: NextRequest) {
     // Erros de conexão do Prisma
     if (isPrismaConnectionError(error)) {
       console.error('❌ [POST /api/cars] Erro de conexão com banco de dados')
+      console.error('DATABASE_URL configurada:', !!process.env.DATABASE_URL)
+      console.error('DATABASE_URL host:', process.env.DATABASE_URL?.match(/@([^:]+)/)?.[1] || 'não encontrado')
+      
+      // Tentar resetar conexão antes de retornar erro
+      try {
+        await resetPrismaConnection()
+      } catch (resetError) {
+        console.warn('⚠️ [POST /api/cars] Erro ao resetar conexão:', resetError)
+      }
+
       return NextResponse.json(
         {
           error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
