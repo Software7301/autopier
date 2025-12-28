@@ -169,39 +169,11 @@ export async function POST(request: NextRequest) {
 
     console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
-    // Verificar se DATABASE_URL está configurada
-    if (!process.env.DATABASE_URL) {
-      console.error('❌ [POST /api/cars] DATABASE_URL não está configurada!')
-      return NextResponse.json(
-        {
-          error: 'Configuração do banco de dados não encontrada. Entre em contato com o suporte.',
-          code: 'DATABASE_URL_MISSING',
-        },
-        { status: 500 }
-      )
-    }
-
-    // Tentar conectar ao banco antes de executar a query
-    try {
-      await prisma.$connect()
-      console.log('✅ [POST /api/cars] Conexão com banco estabelecida')
-    } catch (connectError: any) {
-      console.error('❌ [POST /api/cars] Erro ao conectar ao banco:', connectError)
-      // Continuar mesmo com erro de conexão, o retryQuery vai tentar novamente
-    }
-
-    // Usar retryQuery para criação também
-    const car = await retryQuery(
-      () =>
-        prisma.car.create({
-          data: carData,
-        }),
-      {
-        maxRetries: 5,
-        delay: 2000,
-        resetOnPreparedStatementError: true,
-      }
-    )
+    // Criar veículo diretamente (Prisma gerencia conexões automaticamente)
+    // Similar a outras rotas que funcionam como /api/negociacao e /api/checkout
+    const car = await prisma.car.create({
+      data: carData,
+    })
 
     console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
 
