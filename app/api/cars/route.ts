@@ -100,8 +100,22 @@ export async function GET(request: NextRequest) {
 
 // =======================
 export async function POST(request: NextRequest) {
+  console.log('🚗 [POST /api/cars] Iniciando criação de veículo...')
+  
   try {
     const body = await request.json()
+    console.log('🚗 [POST /api/cars] Dados recebidos:', {
+      hasName: !!body.name,
+      hasBrand: !!body.brand,
+      hasModel: !!body.model,
+      hasYear: !!body.year,
+      hasPrice: !!body.price,
+      hasCategory: !!body.category,
+      hasImageUrl: !!body.imageUrl,
+      category: body.category,
+      year: body.year,
+      price: body.price,
+    })
 
     const {
       name,
@@ -121,6 +135,15 @@ export async function POST(request: NextRequest) {
 
     // Validações obrigatórias
     if (!name || !brand || !model || !year || !price || !category || !imageUrl) {
+      console.error('❌ [POST /api/cars] Campos obrigatórios faltando:', {
+        name: !!name,
+        brand: !!brand,
+        model: !!model,
+        year: !!year,
+        price: !!price,
+        category: !!category,
+        imageUrl: !!imageUrl,
+      })
       return NextResponse.json(
         {
           error:
@@ -132,50 +155,84 @@ export async function POST(request: NextRequest) {
 
     const validCategories = ['SUV', 'SEDAN', 'COMPACTO', 'ESPORTIVO']
     if (!validCategories.includes(category)) {
+      console.error('❌ [POST /api/cars] Categoria inválida:', category)
       return NextResponse.json(
-        { error: 'Categoria inválida' },
+        { error: `Categoria inválida. Use uma das seguintes: ${validCategories.join(', ')}` },
         { status: 400 }
       )
     }
 
+    // Validar tipos numéricos
+    const yearNum = Number(year)
+    const priceNum = Number(price)
+    
+    if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
+      console.error('❌ [POST /api/cars] Ano inválido:', year)
+      return NextResponse.json(
+        { error: 'Ano inválido. Deve ser um número entre 1900 e 2100' },
+        { status: 400 }
+      )
+    }
+
+    if (isNaN(priceNum) || priceNum <= 0) {
+      console.error('❌ [POST /api/cars] Preço inválido:', price)
+      return NextResponse.json(
+        { error: 'Preço inválido. Deve ser um número maior que zero' },
+        { status: 400 }
+      )
+    }
+
+    // Validar enums
+    const validFuelTypes = ['FLEX', 'GASOLINA', 'DIESEL', 'ELETRICO', 'HIBRIDO']
+    const validTransmissionTypes = ['MANUAL', 'AUTOMATIC']
+    
+    const finalFuel = validFuelTypes.includes(fuel) ? fuel : 'FLEX'
+    const finalTransmission = validTransmissionTypes.includes(transmission) ? transmission : 'AUTOMATIC'
+
     const carData = {
-      name,
-      brand,
-      model,
-      year: Number(year),
-      price: Number(price),
-      category,
-      imageUrl,
+      name: name.trim(),
+      brand: brand.trim(),
+      model: model.trim(),
+      year: yearNum,
+      price: priceNum,
+      category: category as 'SUV' | 'SEDAN' | 'COMPACTO' | 'ESPORTIVO',
+      imageUrl: imageUrl.trim(),
       mileage: mileage ? Number(mileage) : null,
-      description: description || null,
-      color: color || null,
-      fuel: fuel || 'FLEX',
-      transmission: transmission || 'AUTOMATIC',
+      description: description ? description.trim() : null,
+      color: color ? color.trim() : null,
+      fuel: finalFuel as 'FLEX' | 'GASOLINA' | 'DIESEL' | 'ELETRICO' | 'HIBRIDO',
+      transmission: finalTransmission as 'MANUAL' | 'AUTOMATIC',
       available: available !== false,
       featured: false,
     }
 
-    console.log('🚗 Criando veículo:', carData)
+    console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
-    const car = await prisma.car.create({
-      data: carData,
-    })
+    // Usar retryQuery para criação também
+    const car = await retryQuery(() =>
+      prisma.car.create({
+        data: carData,
+      })
+    )
+
+    console.log('✅ [POST /api/cars] Veículo criado com sucesso:', car.id)
 
     return NextResponse.json(car, { status: 201 })
   } catch (error: any) {
-    console.error('❌ Erro ao criar veículo:', error)
+    console.error('❌ [POST /api/cars] Erro ao criar veículo:', error)
     console.error('Error code:', error.code)
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack?.substring(0, 500))
+    console.error('Error stack:', error.stack?.substring(0, 1000))
+    console.error('Error meta:', error.meta)
 
-    // Erros de conexão do Prisma - retornar mensagem real do Prisma
-    if (
-      error.code === 'P1001' || // Can't reach database server
-      error.code === 'P1000' || // Authentication failed
-      error.code === 'P1017' || // Server has closed the connection
-      error.code === 'P1002' || // Database server connection timeout
-      error.code === 'P1003' || // Database does not exist
+    // Erros de conexão do Prisma
+    const isConnectionError = 
+      error.code === 'P1001' ||
+      error.code === 'P1000' ||
+      error.code === 'P1017' ||
+      error.code === 'P1002' ||
+      error.code === 'P1003' ||
       error.name === 'PrismaClientInitializationError' ||
       error.message?.includes('Can\'t reach database server') ||
       error.message?.includes('Environment variable not found') ||
@@ -183,29 +240,46 @@ export async function POST(request: NextRequest) {
       error.message?.includes('SSL') ||
       error.message?.includes('timeout') ||
       error.message?.includes('certificate')
-    ) {
+
+    if (isConnectionError) {
+      console.error('❌ [POST /api/cars] Erro de conexão com banco de dados')
       return NextResponse.json(
         {
-          error: 'Erro de conexão com o banco de dados',
-          details: error.message,
+          error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
           code: error.code || error.name,
         },
-        { status: 500 }
+        { status: 503 }
       )
     }
 
     // Erros de validação do Prisma
     if (error.code === 'P2002') {
+      const field = error.meta?.target?.[0] || 'campo'
+      console.error('❌ [POST /api/cars] Dados duplicados:', field)
       return NextResponse.json(
-        { error: 'Veículo com dados duplicados' },
+        { error: `Veículo com ${field} duplicado` },
         { status: 409 }
       )
     }
 
+    if (error.code === 'P2003') {
+      console.error('❌ [POST /api/cars] Foreign key constraint failed')
+      return NextResponse.json(
+        { error: 'Erro de validação: referência inválida' },
+        { status: 400 }
+      )
+    }
+
+    // Erro genérico
     return NextResponse.json(
       { 
         error: 'Erro ao criar veículo',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        code: error.code || 'UNKNOWN_ERROR',
+        hint: error.message?.includes('Invalid value') 
+          ? 'Verifique se todos os campos estão no formato correto'
+          : undefined
       },
       { status: 500 }
     )
