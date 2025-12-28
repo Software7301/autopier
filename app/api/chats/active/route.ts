@@ -129,12 +129,12 @@ export async function GET(request: NextRequest) {
 
     if (isConnectionError) {
       console.warn('⚠️ [GET /api/chats/active] Banco indisponível. Retornando array vazio.')
-      return NextResponse.json({ chats: [] }, { status: 503 })
+      return NextResponse.json({ chats: [] }, { status: 200 })
     }
 
     // SEMPRE retornar { chats: [] } em caso de erro (não objeto de erro)
     console.warn('⚠️ [GET /api/chats/active] Erro desconhecido. Retornando array vazio.')
-    return NextResponse.json({ chats: [] })
+    return NextResponse.json({ chats: [] }, { status: 200 })
   }
 }
 

@@ -94,11 +94,11 @@ export async function GET(request: NextRequest) {
 
     if (isConnectionError) {
       console.warn('⚠️ [GET /api/client/negotiations] Banco indisponível. Retornando array vazio.')
-      return NextResponse.json([], { status: 503 })
+      return NextResponse.json([], { status: 200 })
     }
 
     console.warn('⚠️ [GET /api/client/negotiations] Erro desconhecido. Retornando array vazio.')
-    return NextResponse.json([])
+    return NextResponse.json([], { status: 200 })
   }
 }
 

@@ -108,11 +108,11 @@ export async function GET(request: NextRequest) {
 
     if (isConnectionError) {
       console.warn('⚠️ [GET /api/cars] Erro de conexão com o banco. Retornando array vazio.')
-      return NextResponse.json([], { status: 503 })
+      return NextResponse.json([], { status: 200 })
     }
 
     console.warn('⚠️ [GET /api/cars] Erro desconhecido. Retornando array vazio.')
-    return NextResponse.json([])
+    return NextResponse.json([], { status: 200 })
   }
 }
 
