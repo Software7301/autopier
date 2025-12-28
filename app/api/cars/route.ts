@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, resetPrismaConnection } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // Função helper para retry de queries do Prisma
 async function retryQuery<T>(
   queryFn: () => Promise<T>,
-  maxRetries = 2,
+  maxRetries = 3,
   delay = 1000
 ): Promise<T> {
   for (let i = 0; i < maxRetries; i++) {
@@ -24,8 +24,26 @@ async function retryQuery<T>(
         error.message?.includes('Connection') ||
         error.message?.includes('timeout')
 
+      // Erro específico de prepared statement duplicado (42P05)
+      const isPreparedStatementError = 
+        error.message?.includes('prepared statement') ||
+        error.message?.includes('already exists') ||
+        error.message?.includes('42P05')
+
+      if (isPreparedStatementError && i < maxRetries - 1) {
+        console.warn(`⚠️ [Retry] Erro de prepared statement (tentativa ${i + 1}/${maxRetries}). Resetando conexão...`)
+        
+        // Resetar conexão do Prisma para limpar prepared statements
+        await resetPrismaConnection()
+        
+        // Aguardar um pouco antes de tentar novamente
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
+        
+        continue
+      }
+
       if (isConnectionError && i < maxRetries - 1) {
-        console.warn(`⚠️ Tentativa ${i + 1} falhou. Tentando novamente em ${delay}ms...`)
+        console.warn(`⚠️ [Retry] Erro de conexão (tentativa ${i + 1}/${maxRetries}). Tentando novamente em ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay))
         continue
       }
@@ -225,6 +243,26 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 1000))
     console.error('Error meta:', error.meta)
+
+    // Erro específico de prepared statement duplicado (42P05)
+    const isPreparedStatementError = 
+      error.message?.includes('prepared statement') ||
+      error.message?.includes('already exists') ||
+      error.message?.includes('42P05')
+
+    if (isPreparedStatementError) {
+      console.error('❌ [POST /api/cars] Erro de prepared statement duplicado após todas as tentativas')
+      // Resetar conexão para próxima requisição
+      await resetPrismaConnection()
+      return NextResponse.json(
+        {
+          error: 'Erro temporário ao criar veículo. Por favor, tente novamente em alguns segundos.',
+          code: 'PREPARED_STATEMENT_ERROR',
+          hint: 'Este é um erro temporário comum em ambientes serverless. Tente novamente.',
+        },
+        { status: 503 }
+      )
+    }
 
     // Erros de conexão do Prisma
     const isConnectionError = 

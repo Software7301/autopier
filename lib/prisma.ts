@@ -64,6 +64,22 @@ if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma
 }
 
+// Função helper para resetar conexão em caso de erro de prepared statement
+export async function resetPrismaConnection() {
+  try {
+    await prisma.$disconnect()
+    // Limpar a instância global para forçar recriação
+    if (globalForPrisma.prisma) {
+      globalForPrisma.prisma = undefined
+    }
+    // Aguardar um pouco antes de reconectar
+    await new Promise(resolve => setTimeout(resolve, 500))
+  } catch (error) {
+    // Ignorar erros de desconexão
+    console.warn('⚠️ Erro ao resetar conexão Prisma:', error)
+  }
+}
+
 // Garantir desconexão adequada em caso de erro
 if (process.env.NODE_ENV === 'production') {
   // Em produção, garantir que conexões sejam fechadas adequadamente
