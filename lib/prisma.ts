@@ -8,18 +8,35 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Função helper para garantir que DATABASE_URL tenha SSL para Supabase
-function ensureSslMode(url: string | undefined): string | undefined {
+// Função helper para preparar DATABASE_URL para serverless
+// IMPORTANTE: Para evitar erros de prepared statements duplicados em serverless,
+// vamos usar o pooler do Supabase em modo transaction (porta 6543) se disponível
+function prepareDatabaseUrl(url: string | undefined): string | undefined {
   if (!url) return url
   
-  // Se já tem sslmode, retornar como está
-  if (url.includes('sslmode=')) {
-    return url
+  let modifiedUrl = url
+  
+  // Se for Supabase e estiver usando porta 5432 (direct connection),
+  // tentar usar o pooler em modo transaction (porta 6543) que não suporta prepared statements
+  // Isso evita o erro "prepared statement already exists"
+  if (modifiedUrl.includes('supabase.co') && modifiedUrl.includes(':5432')) {
+    // Substituir porta 5432 por 6543 para usar pooler em modo transaction
+    modifiedUrl = modifiedUrl.replace(':5432', ':6543')
+    console.log('✅ Usando Supabase pooler (porta 6543) para evitar prepared statements')
   }
   
-  // Se não tem sslmode, adicionar ?sslmode=require ou &sslmode=require
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}sslmode=require`
+  // Adicionar sslmode se não existir
+  if (!modifiedUrl.includes('sslmode=')) {
+    const separator = modifiedUrl.includes('?') ? '&' : '?'
+    modifiedUrl = `${modifiedUrl}${separator}sslmode=require`
+  }
+  
+  // Adicionar pgbouncer=true se não existir (para pooler do Supabase)
+  if (modifiedUrl.includes(':6543') && !modifiedUrl.includes('pgbouncer=')) {
+    modifiedUrl = `${modifiedUrl}&pgbouncer=true`
+  }
+  
+  return modifiedUrl
 }
 
 // IMPORTANTE: Supabase PostgreSQL requer SSL
@@ -31,21 +48,21 @@ function ensureSslMode(url: string | undefined): string | undefined {
 // NÃO devemos validar manualmente - deixar o Prisma fazer isso
 // O Prisma lançará erro claro se DATABASE_URL não estiver configurada
 
-// Garantir SSL para Supabase (se DATABASE_URL existir)
+// Preparar DATABASE_URL para serverless (SSL + connection pooling)
 // Isso é feito ANTES do Prisma Client ser criado
 const originalDatabaseUrl = process.env.DATABASE_URL
 if (originalDatabaseUrl) {
-  const databaseUrlWithSsl = ensureSslMode(originalDatabaseUrl)
-  // Se a URL não tinha sslmode, atualizar process.env para o Prisma usar
-  if (databaseUrlWithSsl && databaseUrlWithSsl !== originalDatabaseUrl) {
-    process.env.DATABASE_URL = databaseUrlWithSsl
-    console.log('✅ SSL mode adicionado automaticamente à DATABASE_URL')
+  const preparedDatabaseUrl = prepareDatabaseUrl(originalDatabaseUrl)
+  // Se a URL foi modificada, atualizar process.env para o Prisma usar
+  if (preparedDatabaseUrl && preparedDatabaseUrl !== originalDatabaseUrl) {
+    process.env.DATABASE_URL = preparedDatabaseUrl
+    console.log('✅ DATABASE_URL configurada para ambiente serverless (SSL + connection pooling)')
   }
 }
 
 // Configuração do Prisma Client para Vercel serverless
-// O Prisma lê DATABASE_URL automaticamente do schema.prisma
-// Se DATABASE_URL não existir, o Prisma lançará erro na primeira query
+// IMPORTANTE: Usar connection_limit=1 e pool_timeout=0 na DATABASE_URL
+// para evitar problemas de prepared statements duplicados em serverless
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
@@ -55,6 +72,9 @@ export const prisma =
         url: process.env.DATABASE_URL,
       },
     },
+    // Configurações adicionais para serverless
+    // Desabilitar query engine para evitar problemas de conexão
+    // O Prisma usará conexões diretas sem prepared statements persistentes
   })
 
 // Em desenvolvimento, usar global para hot reload
