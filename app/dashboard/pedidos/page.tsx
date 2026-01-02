@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Search, 
@@ -10,7 +11,8 @@ import {
   Calendar,
   ChevronDown,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Headphones
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -63,10 +65,28 @@ function formatDate(date: string): string {
 }
 
 export default function PedidosPage() {
+  const router = useRouter()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('TODOS')
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  
+  // Função para obter nome do funcionário
+  function getEmployeeName(): string {
+    try {
+      const savedEmployee = localStorage.getItem('autopier_employee')
+      if (savedEmployee) {
+        const parsed = JSON.parse(savedEmployee)
+        if (parsed.firstName && parsed.lastName) {
+          return `${parsed.firstName} ${parsed.lastName}`
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter nome do funcionário:', error)
+    }
+    return 'AutoPier'
+  }
 
   async function fetchPedidos() {
     setLoading(true)
@@ -88,6 +108,55 @@ export default function PedidosPage() {
   useEffect(() => {
     fetchPedidos()
   }, [statusFilter])
+
+  async function handleStartAttendance(pedidoId: string) {
+    setUpdatingStatus(pedidoId)
+    try {
+      // Primeiro, atualizar o status
+      const statusResponse = await fetch(`/api/dashboard/orders/${pedidoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'PROCESSING' }),
+      })
+
+      if (statusResponse.ok) {
+        // Obter nome do funcionário
+        const employeeName = getEmployeeName()
+        
+        // Enviar mensagem automática
+        try {
+          await fetch(`/api/pedido/${pedidoId}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: 'Olá! Estou iniciando o atendimento do seu pedido. Como posso ajudar?',
+              sender: 'funcionario',
+              senderName: employeeName,
+            }),
+          })
+        } catch (messageError) {
+          console.error('Erro ao enviar mensagem automática:', messageError)
+        }
+
+        // Atualizar o status localmente
+        setPedidos((prev) =>
+          prev.map((pedido) =>
+            pedido.id === pedidoId ? { ...pedido, status: 'PROCESSING' } : pedido
+          )
+        )
+        
+        // Redirecionar para a página de chat do pedido
+        router.push(`/dashboard/pedidos/${pedidoId}`)
+      } else {
+        alert('Erro ao iniciar atendimento. Tente novamente.')
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar atendimento:', error)
+      alert('Erro ao iniciar atendimento. Tente novamente.')
+    } finally {
+      setUpdatingStatus(null)
+    }
+  }
 
   // Filtrar localmente por busca
   const pedidosFiltrados = pedidos.filter((pedido) => {
@@ -238,9 +307,29 @@ export default function PedidosPage() {
                       {formatDate(pedido.data)}
                     </div>
 
+                    {pedido.status === 'PENDING' && (
+                      <button
+                        onClick={() => handleStartAttendance(pedido.id)}
+                        disabled={updatingStatus === pedido.id}
+                        className="btn-primary !py-2 !px-4 flex items-center gap-2 text-sm"
+                      >
+                        {updatingStatus === pedido.id ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Iniciando...
+                          </>
+                        ) : (
+                          <>
+                            <Headphones className="w-4 h-4" />
+                            Iniciar Atendimento
+                          </>
+                        )}
+                      </button>
+                    )}
+
                     <Link
                       href={`/dashboard/pedidos/${pedido.id}`}
-                      className="btn-primary !py-2 !px-4 flex items-center gap-2"
+                      className="btn-secondary !py-2 !px-4 flex items-center gap-2 text-sm"
                     >
                       <Eye className="w-4 h-4" />
                       Ver Pedido

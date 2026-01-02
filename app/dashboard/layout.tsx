@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -34,6 +34,53 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [employeeName, setEmployeeName] = useState('Funcionário')
+  const [employeeRole, setEmployeeRole] = useState('')
+  const [employeeAvatar, setEmployeeAvatar] = useState<string | null>(null)
+
+  // Carregar nome do funcionário do localStorage
+  useEffect(() => {
+    const loadEmployeeName = () => {
+      const savedEmployee = localStorage.getItem('autopier_employee')
+      if (savedEmployee) {
+        try {
+          const parsed = JSON.parse(savedEmployee)
+          if (parsed.firstName && parsed.lastName) {
+            setEmployeeName(`${parsed.firstName} ${parsed.lastName}`)
+          }
+          if (parsed.role) {
+            setEmployeeRole(parsed.role)
+          }
+          if (parsed.avatarUrl) {
+            setEmployeeAvatar(parsed.avatarUrl)
+          }
+        } catch (error) {
+          console.error('Erro ao carregar nome do funcionário:', error)
+        }
+      }
+    }
+
+    loadEmployeeName()
+
+    // Ouvir evento de atualização
+    const handleEmployeeUpdate = (event: CustomEvent) => {
+      const { firstName, lastName, role, avatarUrl } = event.detail
+      if (firstName && lastName) {
+        setEmployeeName(`${firstName} ${lastName}`)
+      }
+      if (role) {
+        setEmployeeRole(role)
+      }
+      if (avatarUrl) {
+        setEmployeeAvatar(avatarUrl)
+      }
+    }
+
+    window.addEventListener('employeeUpdated', handleEmployeeUpdate as EventListener)
+    return () => {
+      window.removeEventListener('employeeUpdated', handleEmployeeUpdate as EventListener)
+    }
+  }, [])
 
   // Se estiver na página de login, não mostrar sidebar
   if (pathname === '/dashboard/login') {
@@ -106,12 +153,27 @@ export default function DashboardLayout({
           {/* Usuário logado */}
           <div className="p-4 border-t border-surface-border">
             <div className="flex items-center gap-3 px-4 py-3">
-              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                <Car className="w-5 h-5 text-primary" />
-              </div>
+              {employeeAvatar ? (
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 flex-shrink-0">
+                  <Image
+                    src={employeeAvatar}
+                    alt={employeeName}
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                  />
+                </div>
+              ) : (
+                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Car className="w-5 h-5 text-primary" />
+                </div>
+              )}
               <div className="flex-1">
-                <p className="text-white text-sm font-medium">Funcionário</p>
-                <p className="text-text-muted text-xs">admin@autopier.com</p>
+                <p className="text-white text-sm font-medium">{employeeName}</p>
+                {employeeRole && (
+                  <p className="text-primary text-xs font-medium">{employeeRole}</p>
+                )}
+                <p className="text-text-muted text-xs">autopiernovacapitalrp@gmail.com</p>
               </div>
             </div>
             <Link

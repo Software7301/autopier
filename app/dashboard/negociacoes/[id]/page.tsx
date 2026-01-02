@@ -99,6 +99,22 @@ export default function NegociacaoChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   
+  // Função para obter nome do funcionário
+  function getEmployeeName(): string {
+    try {
+      const savedEmployee = localStorage.getItem('autopier_employee')
+      if (savedEmployee) {
+        const parsed = JSON.parse(savedEmployee)
+        if (parsed.firstName && parsed.lastName) {
+          return `${parsed.firstName} ${parsed.lastName}`
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter nome do funcionário:', error)
+    }
+    return 'AutoPier'
+  }
+  
   // Estados para notificações e digitação
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const [showToast, setShowToast] = useState(false)
@@ -304,12 +320,13 @@ export default function NegociacaoChatPage() {
         }
       } else {
         // Fallback: adicionar localmente
+        const employeeName = getEmployeeName()
         const localMessage: Message = {
           id: `msg-${Date.now()}`,
           content: messageContent,
           createdAt: new Date().toISOString(),
           sender: 'funcionario',
-          senderName: 'AutoPier',
+          senderName: employeeName,
         }
         setMessages((prev) => [...prev, localMessage])
       }

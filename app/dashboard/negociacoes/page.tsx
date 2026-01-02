@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { 
@@ -14,7 +15,9 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  ImageIcon
+  ImageIcon,
+  Headphones,
+  Eye
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -40,8 +43,12 @@ interface Negociacao {
 }
 
 const statusLabels: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+  OPEN: { label: 'Aguardando Atendimento', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: Clock },
   PENDING: { label: 'Aguardando Atendimento', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: Clock },
   IN_PROGRESS: { label: 'Em Negociação', color: 'text-blue-400', bg: 'bg-blue-500/20', icon: MessageCircle },
+  ACCEPTED: { label: 'Aceita', color: 'text-green-400', bg: 'bg-green-500/20', icon: CheckCircle },
+  REJECTED: { label: 'Rejeitada', color: 'text-red-400', bg: 'bg-red-500/20', icon: AlertCircle },
+  CLOSED: { label: 'Fechada', color: 'text-gray-400', bg: 'bg-gray-500/20', icon: CheckCircle },
   COMPLETED: { label: 'Concluída', color: 'text-green-400', bg: 'bg-green-500/20', icon: CheckCircle },
   CANCELLED: { label: 'Cancelada', color: 'text-red-400', bg: 'bg-red-500/20', icon: AlertCircle },
 }
@@ -94,9 +101,27 @@ function formatRelativeTime(date: string): string {
 }
 
 export default function NegociacoesPage() {
+  const router = useRouter()
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('TODOS')
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  
+  // Função para obter nome do funcionário
+  function getEmployeeName(): string {
+    try {
+      const savedEmployee = localStorage.getItem('autopier_employee')
+      if (savedEmployee) {
+        const parsed = JSON.parse(savedEmployee)
+        if (parsed.firstName && parsed.lastName) {
+          return `${parsed.firstName} ${parsed.lastName}`
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter nome do funcionário:', error)
+    }
+    return 'AutoPier'
+  }
 
   async function fetchNegociacoes() {
     setLoading(true)
@@ -111,6 +136,54 @@ export default function NegociacoesPage() {
     }
   }
 
+  async function handleStartAttendance(negociacaoId: string) {
+    setUpdatingStatus(negociacaoId)
+    try {
+      // Primeiro, atualizar o status
+      const statusResponse = await fetch(`/api/dashboard/negotiations/${negociacaoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'IN_PROGRESS' }),
+      })
+
+      if (statusResponse.ok) {
+        // Obter nome do funcionário
+        const employeeName = getEmployeeName()
+        
+        // Enviar mensagem automática
+        try {
+          await fetch(`/api/dashboard/negotiations/${negociacaoId}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: 'Olá! Estou iniciando o atendimento. Como posso ajudar?',
+            }),
+          })
+        } catch (messageError) {
+          console.error('Erro ao enviar mensagem automática:', messageError)
+          // Não bloquear se a mensagem falhar, apenas logar
+        }
+
+        // Atualizar o status localmente
+        setNegociacoes((prev) =>
+          prev.map((neg) =>
+            neg.id === negociacaoId ? { ...neg, status: 'IN_PROGRESS' } : neg
+          )
+        )
+        
+        // Redirecionar para a página de chat
+        router.push(`/dashboard/negociacoes/${negociacaoId}`)
+      } else {
+        alert('Erro ao iniciar atendimento. Tente novamente.')
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar atendimento:', error)
+      alert('Erro ao iniciar atendimento. Tente novamente.')
+    } finally {
+      setUpdatingStatus(null)
+    }
+  }
+
   useEffect(() => {
     fetchNegociacoes()
   }, [])
@@ -122,9 +195,9 @@ export default function NegociacoesPage() {
 
   // Contadores por status
   const contadores = {
-    pendentes: negociacoes.filter((n) => n.status === 'PENDING').length,
+    pendentes: negociacoes.filter((n) => n.status === 'OPEN' || n.status === 'PENDING').length,
     emAndamento: negociacoes.filter((n) => n.status === 'IN_PROGRESS').length,
-    concluidas: negociacoes.filter((n) => n.status === 'COMPLETED').length,
+    concluidas: negociacoes.filter((n) => n.status === 'ACCEPTED' || n.status === 'CLOSED' || n.status === 'COMPLETED').length,
   }
 
   return (
@@ -256,7 +329,7 @@ export default function NegociacoesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 className={`card-static p-6 hover:border-primary/30 transition-all duration-300 ${
-                  neg.status === 'PENDING' ? 'border-l-4 border-l-yellow-500' : ''
+                  (neg.status === 'OPEN' || neg.status === 'PENDING') ? 'border-l-4 border-l-yellow-500' : ''
                 }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
@@ -319,12 +392,40 @@ export default function NegociacoesPage() {
                     </div>
                   </div>
 
-                  {/* Status */}
+                  {/* Status e Ações */}
                   <div className="flex flex-row lg:flex-col items-center lg:items-end gap-4">
                     <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${status.bg} ${status.color}`}>
                       <StatusIcon className="w-4 h-4" />
                       {status.label}
                     </span>
+                    
+                    {(neg.status === 'OPEN' || neg.status === 'PENDING') && (
+                      <button
+                        onClick={() => handleStartAttendance(neg.id)}
+                        disabled={updatingStatus === neg.id}
+                        className="btn-primary !py-2 !px-4 flex items-center gap-2 text-sm"
+                      >
+                        {updatingStatus === neg.id ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Iniciando...
+                          </>
+                        ) : (
+                          <>
+                            <Headphones className="w-4 h-4" />
+                            Iniciar Atendimento
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    <Link
+                      href={`/dashboard/negociacoes/${neg.id}`}
+                      className="btn-secondary !py-2 !px-4 flex items-center gap-2 text-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Ver Chat
+                    </Link>
                   </div>
                 </div>
               </motion.div>

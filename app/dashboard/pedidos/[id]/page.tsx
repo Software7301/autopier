@@ -100,6 +100,22 @@ export default function PedidoDetalhePage() {
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   
+  // Função para obter nome do funcionário
+  function getEmployeeName(): string {
+    try {
+      const savedEmployee = localStorage.getItem('autopier_employee')
+      if (savedEmployee) {
+        const parsed = JSON.parse(savedEmployee)
+        if (parsed.firstName && parsed.lastName) {
+          return `${parsed.firstName} ${parsed.lastName}`
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter nome do funcionário:', error)
+    }
+    return 'AutoPier'
+  }
+  
   // Estados para notificações
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState({ title: '', message: '' })
@@ -241,13 +257,14 @@ export default function PedidoDetalhePage() {
     setNewMessage('')
 
     try {
+      const employeeName = getEmployeeName()
       const response = await fetch(`/api/pedido/${pedidoId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: messageContent,
           sender: 'funcionario',
-          senderName: 'AutoPier',
+          senderName: employeeName,
         }),
       })
 
@@ -265,6 +282,24 @@ export default function PedidoDetalhePage() {
 
   async function handleStatusChange(newStatus: string) {
     if (!pedido) return
+
+    // Se estiver mudando de PENDING para PROCESSING, enviar mensagem automática
+    if (pedido.status === 'PENDING' && newStatus === 'PROCESSING') {
+      try {
+        await fetch(`/api/pedido/${pedidoId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: 'Olá! Estou iniciando o atendimento do seu pedido. Como posso ajudar?',
+            sender: 'funcionario',
+            senderName: 'AutoPier',
+          }),
+        })
+      } catch (messageError) {
+        console.error('Erro ao enviar mensagem automática:', messageError)
+        // Não bloquear se a mensagem falhar, apenas logar
+      }
+    }
 
     // Se for finalizar, iniciar processo de animação
     if (newStatus === 'COMPLETED') {
