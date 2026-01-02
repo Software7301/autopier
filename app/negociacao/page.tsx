@@ -86,6 +86,32 @@ export default function NegociacaoPage() {
     setSellForm({ ...sellForm, vehicleImageUrl: '' })
   }
 
+  // Handler para formatar valor em tempo real
+  function handlePriceChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value
+    
+    // Remove tudo que não é número
+    const numbersOnly = value.replace(/\D/g, '')
+    
+    // Se não há números, limpa o campo
+    if (!numbersOnly) {
+      setSellForm({ ...sellForm, proposedPrice: '' })
+      return
+    }
+    
+    // Converte para número (trata como centavos)
+    const numericValue = parseInt(numbersOnly, 10)
+    
+    // Formata no padrão brasileiro (2.000.000,00)
+    // Divide por 100 para tratar os últimos 2 dígitos como decimais
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numericValue / 100)
+    
+    setSellForm({ ...sellForm, proposedPrice: formatted })
+  }
+
   // Handler para iniciar negociação
   async function handleStartNegotiation(e: React.FormEvent) {
     e.preventDefault()
@@ -119,7 +145,7 @@ export default function NegociacaoPage() {
             vehicleYear: parseInt(sellForm.vehicleYear),
             vehicleMileage: parseInt(sellForm.vehicleMileage),
             vehicleDescription: sellForm.vehicleDescription,
-            proposedPrice: parseFloat(sellForm.proposedPrice.replace(/\D/g, '')),
+            proposedPrice: parseFloat(sellForm.proposedPrice.replace(/\./g, '').replace(',', '.')) || 0,
             customerName: sellForm.customerName,
             customerPhone: sellForm.customerPhone,
             vehicleImageUrl: imageUrl || null,
@@ -312,9 +338,9 @@ export default function NegociacaoPage() {
                 <input
                   type="text"
                   value={sellForm.proposedPrice}
-                  onChange={(e) => setSellForm({ ...sellForm, proposedPrice: e.target.value })}
+                  onChange={handlePriceChange}
                   required
-                  placeholder="R$ 50.000"
+                  placeholder="R$ 50.000,00"
                   className="input-field"
                 />
               </div>
