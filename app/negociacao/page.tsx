@@ -130,7 +130,7 @@ export default function NegociacaoPage() {
             customerName: buyForm.customerName,
             customerPhone: buyForm.customerPhone,
             message: buyForm.message,
-          }
+          };
 
       const response = await fetch('/api/negociacao', {
         method: 'POST',
