@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       vehicleYear,
       vehicleMileage,
       vehicleDescription,
+      vehicleImageUrl,
       proposedPrice,
       vehicleInterest,
       message,
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
         vehicleYear: vehicleYear ? parseInt(vehicleYear) : null,
         vehicleMileage: vehicleMileage ? parseInt(vehicleMileage) : null,
         vehicleDescription: vehicleDescription || null,
+        vehicleImageUrl: vehicleImageUrl || null,
         proposedPrice: proposedPrice ? parseFloat(proposedPrice) : null,
       },
     })

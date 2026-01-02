@@ -18,7 +18,8 @@ import {
   MessageCircle,
   Loader2,
   AlertCircle,
-  Bell
+  Bell,
+  ImageIcon
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -559,16 +560,24 @@ export default function NegociacaoChatPage() {
         <div className="space-y-5">
           {/* Veículo */}
           <div className="card-static overflow-hidden">
-            {negociacao.veiculo.imageUrl && (
-              <div className="relative h-40 bg-surface-dark">
+            <div className="relative h-40 bg-surface-dark">
+              {negociacao.veiculo.imageUrl ? (
                 <Image
                   src={negociacao.veiculo.imageUrl}
                   alt={negociacao.veiculo.nome}
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 400px"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-surface">
+                  <div className="text-center">
+                    <ImageIcon className="w-12 h-12 text-text-muted mx-auto mb-2" />
+                    <p className="text-text-muted text-sm">Sem imagem</p>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <Car className="w-5 h-5 text-primary" />

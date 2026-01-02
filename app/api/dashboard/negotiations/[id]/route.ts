@@ -56,7 +56,7 @@ export async function GET(
             nome: negotiation.vehicleName || 'Veículo não especificado',
             ano: negotiation.vehicleYear || null,
             preco: negotiation.proposedPrice || 0,
-            imageUrl: '',
+            imageUrl: negotiation.vehicleImageUrl || '',
           },
       tipo: negotiation.type,
       status: negotiation.status,

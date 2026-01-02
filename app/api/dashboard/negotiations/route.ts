@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
               nome: neg.vehicleName || 'Veículo não especificado',
               ano: neg.vehicleYear || null,
               preco: neg.proposedPrice || 0,
-              imageUrl: '',
+              imageUrl: neg.vehicleImageUrl || '',
             },
         tipo: neg.type,
         status: neg.status,

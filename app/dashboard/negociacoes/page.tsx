@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { 
   MessageSquare, 
   Car, 
@@ -12,7 +13,8 @@ import {
   RefreshCw,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ImageIcon
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -29,6 +31,7 @@ interface Negociacao {
     nome: string
     ano: number
     preco: number
+    imageUrl: string
   }
   tipo: string
   status: string
@@ -271,13 +274,34 @@ export default function NegociacoesPage() {
                     </div>
 
                     {/* Veículo */}
-                    <div>
-                      <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
-                        <Car className="w-4 h-4" />
-                        Veículo
+                    <div className="flex items-center gap-4">
+                      {/* Imagem do Veículo */}
+                      <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-surface-border flex-shrink-0 bg-surface">
+                        {neg.veiculo.imageUrl ? (
+                          <Image
+                            src={neg.veiculo.imageUrl}
+                            alt={neg.veiculo.nome}
+                            fill
+                            className="object-cover"
+                            sizes="80px"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-surface">
+                            <div className="text-center">
+                              <ImageIcon className="w-6 h-6 text-text-muted mx-auto mb-1" />
+                              <p className="text-[10px] text-text-muted px-1">Sem imagem</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-white font-medium">{neg.veiculo.nome}</p>
-                      <p className="text-accent font-semibold">{formatPrice(neg.veiculo.preco)}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
+                          <Car className="w-4 h-4" />
+                          Veículo
+                        </div>
+                        <p className="text-white font-medium truncate">{neg.veiculo.nome}</p>
+                        <p className="text-accent font-semibold">{formatPrice(neg.veiculo.preco)}</p>
+                      </div>
                     </div>
 
                     {/* Data e Tipo */}

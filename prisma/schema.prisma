@@ -80,6 +80,7 @@ model Negotiation {
   vehicleYear        Int?
   vehicleMileage     Int?
   vehicleDescription String?
+  vehicleImageUrl    String?
   proposedPrice      Float?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt

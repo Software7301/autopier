@@ -11,8 +11,13 @@ import {
   DollarSign,
   Calendar,
   Gauge,
-  FileText
+  FileText,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react'
+import Image from 'next/image'
+import { uploadImageToSupabase } from '@/lib/upload'
 
 type NegotiationType = 'BUY' | 'SELL'
 
@@ -20,6 +25,7 @@ export default function NegociacaoPage() {
   const router = useRouter()
   const [negotiationType, setNegotiationType] = useState<NegotiationType | null>(null)
   const [loading, setLoading] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Form state para venda
   const [sellForm, setSellForm] = useState({
@@ -31,7 +37,12 @@ export default function NegociacaoPage() {
     proposedPrice: '',
     customerName: '',
     customerPhone: '',
+    vehicleImageUrl: '',
   })
+  
+  // Estado para preview da imagem
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
 
   // Form state para compra
   const [buyForm, setBuyForm] = useState({
@@ -41,12 +52,65 @@ export default function NegociacaoPage() {
     message: '',
   })
 
+  // Handler para selecionar imagem
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione apenas arquivos de imagem')
+        return
+      }
+      
+      // Validar tamanho (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('A imagem deve ter no máximo 5MB')
+        return
+      }
+      
+      setImageFile(file)
+      
+      // Criar preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+  
+  // Handler para remover imagem
+  function handleRemoveImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    setSellForm({ ...sellForm, vehicleImageUrl: '' })
+  }
+
   // Handler para iniciar negociação
   async function handleStartNegotiation(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
     try {
+      let imageUrl = sellForm.vehicleImageUrl
+      
+      // Se há uma imagem selecionada, fazer upload
+      if (imageFile) {
+        setUploadingImage(true)
+        try {
+          imageUrl = await uploadImageToSupabase(imageFile, 'cars')
+          setSellForm({ ...sellForm, vehicleImageUrl: imageUrl })
+        } catch (error: any) {
+          console.error('Erro ao fazer upload da imagem:', error)
+          alert(`Erro ao fazer upload da imagem: ${error.message}`)
+          setLoading(false)
+          setUploadingImage(false)
+          return
+        } finally {
+          setUploadingImage(false)
+        }
+      }
+      
       const payload = negotiationType === 'SELL'
         ? {
             type: 'SELL',
@@ -58,6 +122,7 @@ export default function NegociacaoPage() {
             proposedPrice: parseFloat(sellForm.proposedPrice.replace(/\D/g, '')),
             customerName: sellForm.customerName,
             customerPhone: sellForm.customerPhone,
+            vehicleImageUrl: imageUrl || null,
           }
         : {
             type: 'BUY',
@@ -268,6 +333,60 @@ export default function NegociacaoPage() {
                 />
               </div>
 
+              {/* Upload de Imagem */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  <ImageIcon className="w-4 h-4 inline mr-2" />
+                  Foto do Veículo
+                </label>
+                {!imagePreview ? (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="vehicle-image-upload"
+                    />
+                    <label
+                      htmlFor="vehicle-image-upload"
+                      className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-surface-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-surface/50"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-3 text-text-muted" />
+                        <p className="mb-2 text-sm text-text-secondary">
+                          <span className="font-semibold">Clique para fazer upload</span> ou arraste a imagem
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          PNG, JPG, WEBP até 5MB
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative w-full">
+                    <div className="relative w-full h-64 rounded-lg overflow-hidden border border-surface-border">
+                      <Image
+                        src={imagePreview}
+                        alt="Preview do veículo"
+                        fill
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute top-2 right-2 p-2 bg-background-secondary/90 hover:bg-background-secondary rounded-full transition-colors"
+                      >
+                        <X className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-text-muted mt-2">
+                      Clique no X para remover a imagem
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Dados do Cliente */}
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
@@ -303,10 +422,15 @@ export default function NegociacaoPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingImage}
                 className="btn-accent w-full flex items-center justify-center gap-2 text-lg py-4"
               >
-                {loading ? (
+                {uploadingImage ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Enviando imagem...
+                  </>
+                ) : loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Iniciando...
