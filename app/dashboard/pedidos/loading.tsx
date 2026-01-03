@@ -1,7 +1,7 @@
 export default function PedidosLoading() {
   return (
     <div className="space-y-6 animate-pulse">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <div className="h-8 bg-surface-card rounded w-32 mb-2" />
@@ -10,14 +10,14 @@ export default function PedidosLoading() {
         <div className="h-10 bg-surface-card rounded w-32" />
       </div>
 
-      {/* Filter Pills */}
+      {}
       <div className="flex gap-3">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="h-10 bg-surface-card rounded-full w-24" />
         ))}
       </div>
 
-      {/* Table */}
+      {}
       <div className="card overflow-hidden">
         <div className="p-4 border-b border-surface-border">
           <div className="flex gap-4">

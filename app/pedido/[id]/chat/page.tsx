@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ArrowLeft, 
-  Send, 
+import {
+  ArrowLeft,
+  Send,
   ShoppingCart,
   MessageCircle,
   Clock,
@@ -52,19 +52,17 @@ export default function PedidoChatPage() {
   const [sending, setSending] = useState(false)
   const [showNameModal, setShowNameModal] = useState(false)
   const [userName, setUserNameState] = useState<string | null>(null)
-  
-  // Estados para notificações e digitação
+
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState({ title: '', message: '' })
   const lastTypingSentRef = useRef<number>(0)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const prevMessagesCountRef = useRef<number>(0)
-  
+
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  
-  // Hook de notificações
+
   const { permission, requestPermission, notifyNewMessage, playSound, isTabActive } = useNotifications()
 
   useEffect(() => {
@@ -77,22 +75,21 @@ export default function PedidoChatPage() {
     }
   }, [])
 
-  // Handler para quando o nome for informado
   function handleNameSubmit(name: string) {
     setUserName(name)
     setUserNameState(name)
     setShowNameModal(false)
     setLoading(true)
-    // Recarregar dados após salvar o nome
+
     fetchChat()
   }
 
   async function fetchChat() {
     if (!userName) return
-    
+
     try {
       const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
-      
+
       const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
@@ -119,11 +116,11 @@ export default function PedidoChatPage() {
 
   useEffect(() => {
     if (!userName || !orderId) return
-    
+
     const interval = setInterval(async () => {
       try {
         const url = `/api/pedido/${orderId}/chat?customerName=${encodeURIComponent(userName)}`
-        
+
         const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
@@ -133,14 +130,14 @@ export default function PedidoChatPage() {
             if (lastNewMessage && lastNewMessage.sender === 'funcionario') {
               if (prevMessagesCountRef.current > 0) {
                 playSound()
-                
+
                 setToastMessage({
                   title: `${lastNewMessage.senderName || 'AutoPier'}`,
                   message: lastNewMessage.content,
                 })
                 setShowToast(true)
                 setTimeout(() => setShowToast(false), 4000)
-                
+
                 if (!isTabActive()) {
                   notifyNewMessage(
                     lastNewMessage.senderName || 'AutoPier',
@@ -185,19 +182,16 @@ export default function PedidoChatPage() {
 
   const handleTyping = useCallback(() => {
     const now = Date.now()
-    
-    // Evitar spam - só enviar a cada 2 segundos
+
     if (now - lastTypingSentRef.current > 2000) {
       lastTypingSentRef.current = now
       sendTypingStatus(true)
     }
 
-    // Resetar timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
     }
 
-    // Parar de digitar após 3 segundos de inatividade
     typingTimeoutRef.current = setTimeout(() => {
       sendTypingStatus(false)
     }, 3000)
@@ -269,7 +263,7 @@ export default function PedidoChatPage() {
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
       alert('Erro ao enviar mensagem. Verifique sua conexão e tente novamente.')
-      // Restaurar mensagem no input se houver erro
+
       setNewMessage(messageContent)
     } finally {
       setSending(false)
@@ -299,7 +293,7 @@ export default function PedidoChatPage() {
 
   return (
     <div className="min-h-screen py-8">
-      {/* Toast de Notificação */}
+      {}
       <NotificationToast
         show={showToast}
         title={toastMessage.title}
@@ -308,7 +302,7 @@ export default function PedidoChatPage() {
       />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="flex items-center gap-4 mb-6">
           <Link
             href="/"
@@ -325,8 +319,8 @@ export default function PedidoChatPage() {
               Pedido #{orderId.slice(0, 12)}
             </p>
           </div>
-          
-          {/* Indicador de permissão */}
+
+          {}
           {permission === 'default' && (
             <button
               onClick={requestPermission}
@@ -338,9 +332,9 @@ export default function PedidoChatPage() {
           )}
         </div>
 
-        {/* Chat Card */}
+        {}
         <div className="card-static flex flex-col overflow-hidden">
-          {/* Header do Chat */}
+          {}
           <div className="p-5 border-b border-surface-border bg-surface-dark/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center">
@@ -355,8 +349,8 @@ export default function PedidoChatPage() {
             </div>
           </div>
 
-          {/* Área de Mensagens */}
-          <div 
+          {}
+          <div
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-5 space-y-4 min-h-[400px] max-h-[500px]"
           >
@@ -379,8 +373,8 @@ export default function PedidoChatPage() {
                       key={message.id}
                       initial={{ opacity: 0, x: isOwn ? 20 : -20, y: 10 }}
                       animate={{ opacity: 1, x: 0, y: 0 }}
-                      transition={{ 
-                        duration: 0.25, 
+                      transition={{
+                        duration: 0.25,
                         ease: "easeOut",
                         type: "spring",
                         stiffness: 500,
@@ -394,8 +388,8 @@ export default function PedidoChatPage() {
                             {message.senderName}
                           </p>
                         )}
-                        
-                        <motion.div 
+
+                        <motion.div
                           initial={{ scale: 0.95 }}
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.15, ease: "easeOut" }}
@@ -414,15 +408,15 @@ export default function PedidoChatPage() {
                 })}
               </AnimatePresence>
             )}
-            
-            {/* Indicador de Digitação */}
-            <TypingIndicator 
-              isTyping={otherUserTyping} 
+
+            {}
+            <TypingIndicator
+              isTyping={otherUserTyping}
               userName="AutoPier"
             />
           </div>
 
-          {/* Input de Mensagem */}
+          {}
           <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
             <div className="flex items-center gap-4">
               <input
@@ -460,7 +454,7 @@ export default function PedidoChatPage() {
           </form>
         </div>
 
-        {/* Info Card */}
+        {}
         <div className="card-static p-6 mt-6">
           <h3 className="font-semibold text-white mb-3">ℹ️ Informações</h3>
           <ul className="space-y-2 text-text-secondary text-sm">

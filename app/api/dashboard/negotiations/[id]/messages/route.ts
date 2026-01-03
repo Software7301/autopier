@@ -7,7 +7,6 @@ import { isPrismaConnectionError } from '@/lib/utils'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar mensagens da negociação
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,13 +54,11 @@ export async function GET(
       return NextResponse.json([], { status: 200 })
     }
 
-    // SEMPRE retornar array vazio em caso de erro (não objeto de erro)
     console.warn('⚠️ [GET /api/dashboard/negotiations/[id]/messages] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }
 }
 
-// POST - Enviar mensagem (funcionário)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -89,10 +86,8 @@ export async function POST(
       )
     }
 
-    // Obter ID do vendedor
     const sellerId = await getOrCreateSeller()
 
-    // Criar mensagem do funcionário
     const message = await prisma.message.create({
       data: {
         negotiationId: id,
@@ -104,7 +99,6 @@ export async function POST(
       },
     })
 
-    // Atualizar status da negociação para "em andamento" se estiver pendente
     if (negotiation.status === NegotiationStatus.OPEN) {
       await prisma.negotiation.update({
         where: { id },

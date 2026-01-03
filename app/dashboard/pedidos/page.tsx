@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  Search, 
-  ShoppingCart, 
-  Car, 
+import {
+  Search,
+  ShoppingCart,
+  Car,
   Users,
   Calendar,
   ChevronDown,
@@ -71,8 +71,7 @@ export default function PedidosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('TODOS')
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
-  
-  // Função para obter nome do funcionário
+
   function getEmployeeName(): string {
     try {
       const savedEmployee = localStorage.getItem('autopier_employee')
@@ -94,7 +93,7 @@ export default function PedidosPage() {
       const params = new URLSearchParams()
       if (statusFilter !== 'TODOS') params.set('status', statusFilter)
       if (searchTerm) params.set('search', searchTerm)
-      
+
       const response = await fetch(`/api/dashboard/orders?${params}`)
       const data = await response.json()
       setPedidos(data)
@@ -112,7 +111,7 @@ export default function PedidosPage() {
   async function handleStartAttendance(pedidoId: string) {
     setUpdatingStatus(pedidoId)
     try {
-      // Primeiro, atualizar o status
+
       const statusResponse = await fetch(`/api/dashboard/orders/${pedidoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -120,10 +119,9 @@ export default function PedidosPage() {
       })
 
       if (statusResponse.ok) {
-        // Obter nome do funcionário
+
         const employeeName = getEmployeeName()
-        
-        // Enviar mensagem automática
+
         try {
           await fetch(`/api/pedido/${pedidoId}/chat`, {
             method: 'POST',
@@ -138,14 +136,12 @@ export default function PedidosPage() {
           console.error('Erro ao enviar mensagem automática:', messageError)
         }
 
-        // Atualizar o status localmente
         setPedidos((prev) =>
           prev.map((pedido) =>
             pedido.id === pedidoId ? { ...pedido, status: 'PROCESSING' } : pedido
           )
         )
-        
-        // Redirecionar para a página de chat do pedido
+
         router.push(`/dashboard/pedidos/${pedidoId}`)
       } else {
         alert('Erro ao iniciar atendimento. Tente novamente.')
@@ -158,7 +154,6 @@ export default function PedidosPage() {
     }
   }
 
-  // Filtrar localmente por busca
   const pedidosFiltrados = pedidos.filter((pedido) => {
     if (!searchTerm) return true
     return (
@@ -169,7 +164,7 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white flex items-center gap-3">
@@ -195,7 +190,7 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      {/* Filtros */}
+      {}
       <div className="card-static p-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -226,7 +221,7 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      {/* Lista de Pedidos */}
+      {}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
@@ -245,7 +240,7 @@ export default function PedidosPage() {
             {pedidos.length === 0 ? 'Nenhum pedido encontrado' : 'Nenhum resultado para a busca'}
           </h3>
           <p className="text-text-secondary">
-            {pedidos.length === 0 
+            {pedidos.length === 0
               ? 'Assim que um cliente finalizar uma compra, ela aparecerá aqui.'
               : 'Tente ajustar os filtros de busca.'}
           </p>
@@ -264,7 +259,7 @@ export default function PedidosPage() {
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Cliente */}
+                    {}
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <Users className="w-6 h-6 text-primary" />
@@ -275,7 +270,7 @@ export default function PedidosPage() {
                       </div>
                     </div>
 
-                    {/* Veículo */}
+                    {}
                     <div>
                       <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
                         <Car className="w-4 h-4" />
@@ -285,7 +280,7 @@ export default function PedidosPage() {
                       <p className="text-text-secondary text-sm">Cor: {pedido.cor}</p>
                     </div>
 
-                    {/* Pagamento */}
+                    {}
                     <div>
                       <p className="text-text-muted text-sm mb-1">Pagamento</p>
                       <p className="text-accent font-bold text-lg">{formatPrice(pedido.valor)}</p>
@@ -296,7 +291,7 @@ export default function PedidosPage() {
                     </div>
                   </div>
 
-                  {/* Status e Ações */}
+                  {}
                   <div className="flex flex-row lg:flex-col items-center lg:items-end gap-4">
                     <span className={`px-4 py-2 rounded-full text-sm font-medium ${status.bg} ${status.color}`}>
                       {status.label}

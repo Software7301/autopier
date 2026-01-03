@@ -4,11 +4,9 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Obter informações do funcionário
 export async function GET() {
   try {
-    // Por enquanto, retornar dados padrão ou do localStorage
-    // Em produção, pode ser salvo no banco de dados
+
     return NextResponse.json({
       firstName: '',
       lastName: '',
@@ -25,7 +23,6 @@ export async function GET() {
   }
 }
 
-// POST - Salvar informações do funcionário
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -45,8 +42,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Por enquanto, apenas retornar sucesso
-    // Em produção, pode ser salvo no banco de dados
     return NextResponse.json({
       success: true,
       firstName,

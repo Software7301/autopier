@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ShoppingCart, 
-  User, 
+import {
+  ShoppingCart,
+  User,
   Phone,
   ArrowRight,
   Loader2,
@@ -64,9 +64,9 @@ export default function ClientePedidosPage() {
   const [showNameModal, setShowNameModal] = useState(false)
 
   useEffect(() => {
-    // Verificar se já existe nome salvo
+
     const savedName = getUserName()
-    
+
     if (hasUserName() && savedName) {
       setName(savedName)
       loadData(savedName)
@@ -81,7 +81,7 @@ export default function ClientePedidosPage() {
     try {
       const ordersResponse = await fetch(`/api/client/orders?customerName=${encodeURIComponent(customerName)}`)
       const ordersData = await ordersResponse.json()
-      
+
       setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error)
@@ -109,7 +109,6 @@ export default function ClientePedidosPage() {
     }
   }
 
-  // Mostrar modal de nome se necessário
   if (showNameModal) {
     return (
       <NameModal
@@ -134,7 +133,7 @@ export default function ClientePedidosPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -190,16 +189,16 @@ export default function ClientePedidosPage() {
                 {orders.map((order) => {
                   const status = statusLabels[order.status] || { label: order.status, color: 'text-gray-400' }
                   return (
-                    <Link 
-                      key={order.id} 
+                    <Link
+                      key={order.id}
                       href={`/pedido/${order.id}/chat`}
                       className="block"
                     >
                       <div className="card-static p-5 hover:border-primary/50 transition-colors cursor-pointer">
                         <div className="flex items-start gap-4">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-                            <img 
-                              src={order.carImage} 
+                            <img
+                              src={order.carImage}
                               alt={order.carName}
                               className="w-full h-full object-cover"
                             />
@@ -223,19 +222,19 @@ export default function ClientePedidosPage() {
                                 </span>
                               )}
                             </div>
-                            
+
                             <div className="mb-2">
                               <p className="text-accent font-bold">
                                 {formatPrice(order.totalPrice)}
                               </p>
                             </div>
-                            
+
                             {order.lastMessage && (
                               <p className="text-text-muted text-sm truncate mb-2">
                                 {order.lastMessage}
                               </p>
                             )}
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-text-muted text-xs">
                                 {formatDate(order.updatedAt)}

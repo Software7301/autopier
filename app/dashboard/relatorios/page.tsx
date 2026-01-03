@@ -41,7 +41,6 @@ function formatPrice(price: number): string {
   }).format(price)
 }
 
-
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (
@@ -49,8 +48,8 @@ function CustomTooltip({ active, payload, label }: any) {
         <p className="text-white font-medium mb-2">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {typeof entry.value === 'number' && entry.name.toLowerCase().includes('valor') 
-              ? formatPrice(entry.value) 
+            {entry.name}: {typeof entry.value === 'number' && entry.name.toLowerCase().includes('valor')
+              ? formatPrice(entry.value)
               : entry.value}
           </p>
         ))}
@@ -98,7 +97,7 @@ export default function RelatoriosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div>
         <h1 className="text-3xl font-display font-bold text-white flex items-center gap-3">
           <BarChart3 className="w-8 h-8 text-primary" />
@@ -125,7 +124,7 @@ export default function RelatoriosPage() {
         </motion.div>
       ) : (
         <>
-          {/* Gráfico de Vendas */}
+          {}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -135,7 +134,7 @@ export default function RelatoriosPage() {
               <TrendingUp className="w-5 h-5 text-primary" />
               Vendas por Mês
             </h3>
-            
+
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={charts.salesByMonth}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -143,8 +142,8 @@ export default function RelatoriosPage() {
                 <YAxis stroke="#888" fontSize={12} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar 
-                  dataKey="vendas" 
+                <Bar
+                  dataKey="vendas"
                   name="Vendas"
                   fill="#3b82f6"
                   radius={[6, 6, 0, 0]}
@@ -153,9 +152,9 @@ export default function RelatoriosPage() {
             </ResponsiveContainer>
           </motion.div>
 
-          {/* Gráficos menores */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Status dos Pedidos */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -166,7 +165,7 @@ export default function RelatoriosPage() {
                 <PieChartIcon className="w-5 h-5 text-primary" />
                 Status dos Pedidos
               </h3>
-              
+
               {charts.statusPedidos.some(s => s.value > 0) ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
@@ -200,7 +199,7 @@ export default function RelatoriosPage() {
               )}
             </motion.div>
 
-            {/* Faturamento Acumulado */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -211,7 +210,7 @@ export default function RelatoriosPage() {
                 <Calendar className="w-5 h-5 text-primary" />
                 Faturamento Acumulado
               </h3>
-              
+
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={charts.faturamentoAcumulado}>
                   <defs>
@@ -224,13 +223,13 @@ export default function RelatoriosPage() {
                   <XAxis dataKey="mes" stroke="#888" fontSize={12} />
                   <YAxis stroke="#888" fontSize={12} tickFormatter={(v) => formatPrice(v)} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="faturamento" 
+                  <Area
+                    type="monotone"
+                    dataKey="faturamento"
                     name="Faturamento"
-                    stroke="#22c55e" 
+                    stroke="#22c55e"
                     strokeWidth={3}
-                    fillOpacity={1} 
+                    fillOpacity={1}
                     fill="url(#colorFat)"
                   />
                 </AreaChart>

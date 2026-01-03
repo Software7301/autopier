@@ -12,7 +12,7 @@ function formatPaymentMethod(method: PaymentMethod): string {
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/dashboard/orders] Iniciando busca de pedidos...')
-  
+
   try {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
@@ -23,20 +23,17 @@ export async function GET(request: NextRequest) {
       search: search?.substring(0, 20) + '...',
     })
 
-    // Construir filtro where
     const where: any = {}
 
-    // Por padrão, excluir pedidos finalizados da lista
     if (!status || status === 'TODOS') {
       where.status = { not: OrderStatus.COMPLETED }
     } else if (status && status !== 'TODOS') {
-      // Validar se o status é válido
+
       if (Object.values(OrderStatus).includes(status as OrderStatus)) {
         where.status = status as OrderStatus
       }
     }
 
-    // Filtrar por busca
     if (search) {
       where.customerName = {
         contains: search,
@@ -44,7 +41,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Buscar pedidos - o pooler gerencia conexões automaticamente
     const orders = await prisma.order.findMany({
       where,
       include: {
@@ -80,7 +76,6 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Em caso de erro, retornar array vazio para não quebrar o frontend
     console.warn('⚠️ [GET /api/dashboard/orders] Erro ao buscar pedidos. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }
@@ -98,7 +93,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Validar status se fornecido
     if (status && !Object.values(OrderStatus).includes(status)) {
       return NextResponse.json(
         { error: 'Status inválido' },

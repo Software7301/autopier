@@ -26,16 +26,15 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
   const [dismissed, setDismissed] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Verificar se há chat ativo
   useEffect(() => {
     async function checkActiveChats() {
-      // Verificar se foi dispensado nesta sessão
+
       const dismissedKey = 'autopier_chat_dismissed'
       const dismissedTime = sessionStorage.getItem(dismissedKey)
       if (dismissedTime) {
         const dismissedDate = new Date(dismissedTime)
         const now = new Date()
-        // Se foi dispensado há menos de 30 minutos, não mostrar
+
         if (now.getTime() - dismissedDate.getTime() < 30 * 60 * 1000) {
           setDismissed(true)
           setLoading(false)
@@ -43,9 +42,8 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
         }
       }
 
-      // Tentar recuperar o telefone do localStorage
       const savedPhone = phone || localStorage.getItem('autopier_user_phone')
-      
+
       if (!savedPhone) {
         setLoading(false)
         return
@@ -71,8 +69,7 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
     }
 
     checkActiveChats()
-    
-    // Verificar a cada 30 segundos
+
     const interval = setInterval(checkActiveChats, 30000)
     return () => clearInterval(interval)
   }, [phone])
@@ -86,29 +83,25 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
     const date = new Date(dateString)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
-    
-    // Menos de 1 hora
+
     if (diff < 60 * 60 * 1000) {
       const minutes = Math.floor(diff / (60 * 1000))
       return minutes <= 1 ? 'agora mesmo' : `há ${minutes} min`
     }
-    
-    // Menos de 24 horas
+
     if (diff < 24 * 60 * 60 * 1000) {
       const hours = Math.floor(diff / (60 * 60 * 1000))
       return `há ${hours}h`
     }
-    
-    // Mais de 24 horas
+
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
   }
 
-  // Não mostrar se carregando, dispensado ou sem chat ativo
   if (loading || dismissed || !activeChat) {
     return null
   }
 
-  const chatUrl = activeChat.type === 'negotiation' 
+  const chatUrl = activeChat.type === 'negotiation'
     ? `/negociacao/${activeChat.referenceId}`
     : `/pedido/${activeChat.referenceId}/chat`
 
@@ -121,11 +114,11 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
         className="fixed bottom-4 right-4 z-50 max-w-sm"
       >
         <div className="bg-surface border border-surface-border rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
-          {/* Header com gradiente */}
+          {}
           <div className="h-1.5 bg-gradient-to-r from-primary via-accent to-primary" />
-          
+
           <div className="p-4">
-            {/* Header */}
+            {}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -147,7 +140,7 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
                   </p>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleDismiss}
                 className="text-text-muted hover:text-white transition-colors p-1"
@@ -156,7 +149,7 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
               </button>
             </div>
 
-            {/* Conteúdo */}
+            {}
             <div className="bg-surface-dark/50 rounded-xl p-3 mb-3">
               <p className="text-white font-medium text-sm mb-1">
                 {activeChat.vehicleName}
@@ -168,7 +161,7 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
               )}
             </div>
 
-            {/* Botão */}
+            {}
             <Link
               href={chatUrl}
               className="w-full btn-primary flex items-center justify-center gap-2 text-sm py-2.5"
@@ -184,7 +177,6 @@ export default function ActiveChatBanner({ phone }: ActiveChatBannerProps) {
   )
 }
 
-// Componente menor para mostrar no header
 export function ActiveChatIndicator({ phone }: { phone?: string }) {
   const [hasActiveChat, setHasActiveChat] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -193,7 +185,7 @@ export function ActiveChatIndicator({ phone }: { phone?: string }) {
   useEffect(() => {
     async function checkActiveChats() {
       const savedPhone = phone || localStorage.getItem('autopier_user_phone')
-      
+
       if (!savedPhone) return
 
       try {
@@ -209,7 +201,7 @@ export function ActiveChatIndicator({ phone }: { phone?: string }) {
           setHasActiveChat(true)
           setUnreadCount(data.chat.unreadCount || 0)
           setChatUrl(
-            data.chat.type === 'negotiation' 
+            data.chat.type === 'negotiation'
               ? `/negociacao/${data.chat.referenceId}`
               : `/pedido/${data.chat.referenceId}/chat`
           )

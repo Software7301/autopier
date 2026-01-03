@@ -1,49 +1,45 @@
-// Tipos TypeScript para o projeto AutoPeer
 
-// ===== ENUMS =====
 
 export type UserRole = 'CUSTOMER' | 'DEALER' | 'ADMIN'
 
-export type CarCategory = 
-  | 'SUV' 
-  | 'ESPORTIVO' 
-  | 'SEDAN' 
+export type CarCategory =
+  | 'SUV'
+  | 'ESPORTIVO'
+  | 'SEDAN'
   | 'COMPACTO'
 
-export type FuelType = 
-  | 'FLEX' 
-  | 'GASOLINA' 
-  | 'DIESEL' 
-  | 'ELETRICO' 
+export type FuelType =
+  | 'FLEX'
+  | 'GASOLINA'
+  | 'DIESEL'
+  | 'ELETRICO'
   | 'HIBRIDO'
 
 export type TransmissionType = 'MANUAL' | 'AUTOMATIC'
 
-export type PaymentMethod = 
-  | 'PIX' 
-  | 'DINHEIRO' 
-  | 'CARTAO_CREDITO' 
-  | 'CARTAO_DEBITO' 
-  | 'FINANCIAMENTO' 
+export type PaymentMethod =
+  | 'PIX'
+  | 'DINHEIRO'
+  | 'CARTAO_CREDITO'
+  | 'CARTAO_DEBITO'
+  | 'FINANCIAMENTO'
   | 'OUTROS'
 
-export type OrderStatus = 
-  | 'PENDING' 
-  | 'CONFIRMED' 
-  | 'PROCESSING' 
-  | 'COMPLETED' 
+export type OrderStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'PROCESSING'
+  | 'COMPLETED'
   | 'CANCELLED'
 
 export type NegotiationType = 'BUY' | 'SELL'
 
-export type NegotiationStatus = 
-  | 'OPEN' 
-  | 'IN_PROGRESS' 
-  | 'ACCEPTED' 
-  | 'REJECTED' 
+export type NegotiationStatus =
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'ACCEPTED'
+  | 'REJECTED'
   | 'CLOSED'
-
-// ===== INTERFACES =====
 
 export interface User {
   id: string
@@ -121,8 +117,6 @@ export interface Message {
   sender?: User
 }
 
-// ===== API RESPONSE TYPES =====
-
 export interface ApiResponse<T> {
   data?: T
   error?: string
@@ -136,8 +130,6 @@ export interface PaginatedResponse<T> {
   pageSize: number
   totalPages: number
 }
-
-// ===== FORM TYPES =====
 
 export interface CheckoutFormData {
   customerName: string
@@ -163,8 +155,6 @@ export interface NegotiationBuyFormData {
   customerPhone: string
   message: string
 }
-
-// ===== FILTER TYPES =====
 
 export interface FilterOption {
   value: string

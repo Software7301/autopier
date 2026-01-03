@@ -6,7 +6,6 @@ import CarCard from '@/components/CarCard'
 import FilterPills from '@/components/FilterPills'
 import { CarCardSkeleton } from '@/components/Loading'
 
-// Interface do carro
 interface Car {
   id: string
   name: string
@@ -22,7 +21,6 @@ interface Car {
   featured: boolean
 }
 
-// Categorias disponíveis
 const categoryFilters = [
   { value: 'TODOS', label: 'Todos' },
   { value: 'SUV', label: 'SUV' },
@@ -38,15 +36,14 @@ export default function CarsPage() {
   const [selectedCategory, setSelectedCategory] = useState('TODOS')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Função para buscar carros
   async function fetchCars() {
     try {
       setLoading(true)
       const response = await fetch('/api/cars', { cache: 'no-store' })
       const data = await response.json()
-      
+
       const safeData = Array.isArray(data) ? data : []
-      
+
       console.log('Carros carregados:', safeData.length, safeData)
       setCars(safeData)
       setFilteredCars(safeData)
@@ -67,12 +64,10 @@ export default function CarsPage() {
     const safeCars = Array.isArray(cars) ? cars : []
     let result = safeCars
 
-    // Filtrar por categoria
     if (selectedCategory !== 'TODOS') {
       result = result.filter((car) => car.category === selectedCategory)
     }
 
-    // Filtrar por busca
     if (searchTerm) {
       const search = searchTerm.toLowerCase()
       result = result.filter(
@@ -89,7 +84,7 @@ export default function CarsPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
             Catálogo de <span className="text-gradient">Veículos</span>
@@ -99,9 +94,9 @@ export default function CarsPage() {
           </p>
         </div>
 
-        {/* Filtros */}
+        {}
         <div className="card-static p-6 mb-8 space-y-6">
-          {/* Barra de Busca */}
+          {}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
             <input
@@ -113,7 +108,7 @@ export default function CarsPage() {
             />
           </div>
 
-          {/* Filtros de Categoria */}
+          {}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2 text-text-secondary">
               <SlidersHorizontal className="w-5 h-5" />
@@ -127,7 +122,7 @@ export default function CarsPage() {
           </div>
         </div>
 
-        {/* Resultados */}
+        {}
         <div className="flex items-center justify-between mb-6">
           <p className="text-text-secondary">
             <span className="text-white font-semibold">{filteredCars.length}</span> veículo(s) encontrado(s)
@@ -143,7 +138,7 @@ export default function CarsPage() {
           </button>
         </div>
 
-        {/* Grid de Carros */}
+        {}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...Array(6)].map((_, i) => (
@@ -169,7 +164,7 @@ export default function CarsPage() {
               Nenhum veículo disponível nesta categoria.
             </h3>
             <p className="text-text-secondary mb-6">
-              {selectedCategory === 'TODOS' 
+              {selectedCategory === 'TODOS'
                 ? 'O catálogo está vazio. Veículos serão adicionados em breve.'
                 : `Não há veículos na categoria ${categoryFilters.find(c => c.value === selectedCategory)?.label || selectedCategory}.`
               }

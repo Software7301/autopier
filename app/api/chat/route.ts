@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isEmployee = sender === 'funcionario' || senderId === 'seller-autopier'
-    
+
     let finalSenderId: string
     if (isEmployee) {
       finalSenderId = await getOrCreateSeller()
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       if (customerName) {
         const normalizedCustomerName = customerName.trim().toLowerCase()
         const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
-        
+
         if (normalizedCustomerName !== normalizedBuyerName) {
           return NextResponse.json(
             { error: 'Acesso negado. Esta negociação não pertence a você.' },
@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erro específico de prepared statement
     if (error.message?.includes('bind message supplies') || error.message?.includes('prepared statement')) {
       console.error('❌ Erro de prepared statement - possivelmente problema de conexão')
       return NextResponse.json(
@@ -98,7 +97,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Erros de conexão do Prisma
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
@@ -116,7 +114,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Erros de validação
     if (error.code === 'P2003' || error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Negociação ou usuário não encontrado' },
@@ -125,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao enviar mensagem',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },
@@ -136,7 +133,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/chat] Iniciando busca de mensagens...')
-  
+
   try {
     const searchParams = request.nextUrl.searchParams
     const negotiationId = searchParams.get('negotiationId')
@@ -159,7 +156,6 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Buscar negociação e mensagens separadamente para evitar problemas com prepared statements
     const negotiation = await prisma.negotiation.findUnique({
       where: { id: negotiationId },
       include: {
@@ -178,7 +174,7 @@ export async function GET(request: NextRequest) {
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
-      
+
       if (normalizedCustomerName !== normalizedBuyerName) {
         console.warn('⚠️ [GET /api/chat] Acesso negado:', {
           provided: normalizedCustomerName,
@@ -191,7 +187,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Buscar mensagens em query separada para evitar conflitos de prepared statements
     let messages: any[] = []
     try {
       messages = await prisma.message.findMany({
@@ -204,7 +199,7 @@ export async function GET(request: NextRequest) {
       console.log(`✅ [GET /api/chat] Encontradas ${messages.length} mensagens`)
     } catch (messageError: any) {
       console.error('❌ [GET /api/chat] Erro ao buscar mensagens:', messageError)
-      // Se der erro, retornar array vazio
+
       messages = []
     }
 
@@ -227,7 +222,6 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erro específico de prepared statement
     if (isPreparedStatementError(error)) {
       console.error('❌ [GET /api/chat] Erro de prepared statement')
       return NextResponse.json([], { status: 200 })
@@ -238,7 +232,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
 
-    // Sempre retornar array vazio em caso de erro para não quebrar o frontend
     console.warn('⚠️ [GET /api/chat] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }

@@ -16,7 +16,7 @@ export default function NameModal({ isOpen, onNameSubmit, currentName }: NameMod
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      // Focar no input quando o modal abrir
+
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100)
@@ -39,12 +39,11 @@ export default function NameModal({ isOpen, onNameSubmit, currentName }: NameMod
     onNameSubmit(trimmedName)
   }
 
-  // Modal obrigatório - não pode ser fechado
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Overlay */}
+          {}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -52,7 +51,7 @@ export default function NameModal({ isOpen, onNameSubmit, currentName }: NameMod
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999]"
           />
 
-          {/* Modal */}
+          {}
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}

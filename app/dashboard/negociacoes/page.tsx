@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { 
-  MessageSquare, 
-  Car, 
+import {
+  MessageSquare,
+  Car,
   Users,
   Calendar,
   ChevronDown,
@@ -106,8 +106,7 @@ export default function NegociacoesPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('TODOS')
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
-  
-  // Função para obter nome do funcionário
+
   function getEmployeeName(): string {
     try {
       const savedEmployee = localStorage.getItem('autopier_employee')
@@ -139,7 +138,7 @@ export default function NegociacoesPage() {
   async function handleStartAttendance(negociacaoId: string) {
     setUpdatingStatus(negociacaoId)
     try {
-      // Primeiro, atualizar o status
+
       const statusResponse = await fetch(`/api/dashboard/negotiations/${negociacaoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -147,10 +146,9 @@ export default function NegociacoesPage() {
       })
 
       if (statusResponse.ok) {
-        // Obter nome do funcionário
+
         const employeeName = getEmployeeName()
-        
-        // Enviar mensagem automática
+
         try {
           await fetch(`/api/dashboard/negotiations/${negociacaoId}/messages`, {
             method: 'POST',
@@ -161,17 +159,15 @@ export default function NegociacoesPage() {
           })
         } catch (messageError) {
           console.error('Erro ao enviar mensagem automática:', messageError)
-          // Não bloquear se a mensagem falhar, apenas logar
+
         }
 
-        // Atualizar o status localmente
         setNegociacoes((prev) =>
           prev.map((neg) =>
             neg.id === negociacaoId ? { ...neg, status: 'IN_PROGRESS' } : neg
           )
         )
-        
-        // Redirecionar para a página de chat
+
         router.push(`/dashboard/negociacoes/${negociacaoId}`)
       } else {
         alert('Erro ao iniciar atendimento. Tente novamente.')
@@ -193,7 +189,6 @@ export default function NegociacoesPage() {
     return neg.status === statusFilter
   })
 
-  // Contadores por status
   const contadores = {
     pendentes: negociacoes.filter((n) => n.status === 'OPEN' || n.status === 'PENDING').length,
     emAndamento: negociacoes.filter((n) => n.status === 'IN_PROGRESS').length,
@@ -202,7 +197,7 @@ export default function NegociacoesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white flex items-center gap-3">
@@ -222,7 +217,7 @@ export default function NegociacoesPage() {
         </button>
       </div>
 
-      {/* Cards de Resumo */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -269,7 +264,7 @@ export default function NegociacoesPage() {
         </motion.div>
       </div>
 
-      {/* Filtro */}
+      {}
       <div className="card-static p-4">
         <div className="flex items-center gap-4">
           <span className="text-text-muted text-sm">Filtrar por status:</span>
@@ -290,7 +285,7 @@ export default function NegociacoesPage() {
         </div>
       </div>
 
-      {/* Lista de Negociações */}
+      {}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center space-y-4">
@@ -306,12 +301,12 @@ export default function NegociacoesPage() {
         >
           <MessageSquare className="w-16 h-16 text-text-muted mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">
-            {negociacoes.length === 0 
-              ? 'Nenhuma negociação iniciada até o momento' 
+            {negociacoes.length === 0
+              ? 'Nenhuma negociação iniciada até o momento'
               : 'Nenhuma negociação encontrada com este filtro'}
           </h3>
           <p className="text-text-secondary max-w-md mx-auto">
-            {negociacoes.length === 0 
+            {negociacoes.length === 0
               ? 'Quando um cliente iniciar uma negociação no site, ela aparecerá aqui para você atender.'
               : 'Tente ajustar o filtro de status.'}
           </p>
@@ -321,7 +316,7 @@ export default function NegociacoesPage() {
           {negociacoesFiltradas.map((neg, index) => {
             const status = statusLabels[neg.status] || statusLabels.PENDING
             const StatusIcon = status.icon
-            
+
             return (
               <motion.div
                 key={neg.id}
@@ -333,9 +328,9 @@ export default function NegociacoesPage() {
                 }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                  {/* Info Principal */}
+                  {}
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Cliente */}
+                    {}
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <Users className="w-6 h-6 text-primary" />
@@ -346,9 +341,9 @@ export default function NegociacoesPage() {
                       </div>
                     </div>
 
-                    {/* Veículo */}
+                    {}
                     <div className="flex items-center gap-4">
-                      {/* Imagem do Veículo */}
+                      {}
                       <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-surface-border flex-shrink-0 bg-surface">
                         {neg.veiculo.imageUrl ? (
                           <Image
@@ -377,7 +372,7 @@ export default function NegociacoesPage() {
                       </div>
                     </div>
 
-                    {/* Data e Tipo */}
+                    {}
                     <div>
                       <div className="flex items-center gap-2 text-text-muted text-sm mb-1">
                         <Calendar className="w-4 h-4" />
@@ -392,13 +387,13 @@ export default function NegociacoesPage() {
                     </div>
                   </div>
 
-                  {/* Status e Ações */}
+                  {}
                   <div className="flex flex-row lg:flex-col items-center lg:items-end gap-4">
                     <span className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${status.bg} ${status.color}`}>
                       <StatusIcon className="w-4 h-4" />
                       {status.label}
                     </span>
-                    
+
                     {(neg.status === 'OPEN' || neg.status === 'PENDING') && (
                       <button
                         onClick={() => handleStartAttendance(neg.id)}

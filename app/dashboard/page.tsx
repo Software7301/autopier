@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   TrendingDown,
-  DollarSign, 
-  ShoppingCart, 
-  Clock, 
+  DollarSign,
+  ShoppingCart,
+  Clock,
   Activity,
   ArrowRight,
   Car,
@@ -32,6 +32,7 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts'
 
 interface Stats {
@@ -85,7 +86,6 @@ function formatDate(date: string): string {
   })
 }
 
-// Tooltip customizado para Vendas por Mês
 function SalesTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0].payload
@@ -110,7 +110,6 @@ function SalesTooltip({ active, payload, label }: any) {
   return null
 }
 
-// Tooltip customizado para Status dos Pedidos
 function StatusTooltip({ active, payload }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]
@@ -118,8 +117,8 @@ function StatusTooltip({ active, payload }: any) {
     return (
       <div className="bg-surface-dark border border-primary/30 rounded-xl p-4 shadow-2xl backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-2">
-          <div 
-            className="w-4 h-4 rounded-full" 
+          <div
+            className="w-4 h-4 rounded-full"
             style={{ backgroundColor: color }}
           />
           <span className="text-white font-semibold text-base">{data.name}</span>
@@ -131,7 +130,6 @@ function StatusTooltip({ active, payload }: any) {
   return null
 }
 
-// Tooltip customizado para Faturamento Acumulado
 function RevenueTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0].payload
@@ -148,10 +146,10 @@ function RevenueTooltip({ active, payload, label }: any) {
   return null
 }
 
-function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
   color = 'primary',
   delay = 0
 }: {
@@ -208,13 +206,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Buscar estatísticas
+
         const statsRes = await fetch('/api/dashboard/stats')
         const statsData = await statsRes.json()
         setStats(statsData.stats)
         setCharts(statsData.charts)
 
-        // Buscar pedidos recentes
         const ordersRes = await fetch('/api/dashboard/orders')
         const ordersData = await ordersRes.json()
         const safeOrders = Array.isArray(ordersData) ? ordersData : []
@@ -243,7 +240,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-white">
@@ -259,7 +256,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Cards de Estatísticas */}
+      {}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Vendas no Mês"
@@ -307,9 +304,9 @@ export default function DashboardPage() {
         </motion.div>
       ) : (
         <>
-          {/* Gráficos */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* BarChart - Vendas por Mês */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -320,54 +317,90 @@ export default function DashboardPage() {
                 <BarChart3 className="w-6 h-6 text-primary" />
                 Vendas por Mês
               </h3>
-              
+
               {charts.salesByMonth.length > 0 && charts.salesByMonth.some((m: any) => m.vendas > 0) ? (
                 <ResponsiveContainer width="100%" height={320}>
-                  <BarChart 
+                  <BarChart
                     data={charts.salesByMonth}
-                    margin={{ top: 20, right: 20, left: 10, bottom: 10 }}
+                    margin={{ top: 25, right: 20, left: 0, bottom: 10 }}
+                    barCategoryGap="20%"
                   >
                     <defs>
                       <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.6}/>
+                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={1}/>
+                        <stop offset="50%" stopColor="#3b82f6" stopOpacity={1}/>
+                        <stop offset="100%" stopColor="#2563eb" stopOpacity={0.8}/>
                       </linearGradient>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                          <feMergeNode in="coloredBlur"/>
+                          <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                      </filter>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" opacity={0.3} />
-                    <XAxis 
-                      dataKey="mes" 
-                      stroke="#888" 
-                      fontSize={13}
-                      fontWeight={500}
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" opacity={0.2} vertical={false} />
+                    <XAxis
+                      dataKey="mes"
+                      stroke="#a3a3a3"
+                      fontSize={12}
+                      fontWeight={600}
                       tickLine={false}
-                      axisLine={{ stroke: '#333' }}
+                      axisLine={{ stroke: '#333', strokeWidth: 1 }}
+                      tick={{ fill: '#e5e5e5' }}
                     />
-                    <YAxis 
-                      stroke="#888" 
-                      fontSize={13}
-                      fontWeight={500}
+                    <YAxis
+                      stroke="#a3a3a3"
+                      fontSize={12}
+                      fontWeight={600}
                       tickLine={false}
-                      axisLine={{ stroke: '#333' }}
+                      axisLine={false}
                       domain={[0, 'auto']}
                       allowDecimals={false}
+                      tick={{ fill: '#a3a3a3' }}
+                      width={40}
                     />
-                    <Tooltip 
+                    <Tooltip
                       content={<SalesTooltip />}
-                      cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                      animationDuration={200}
+                      cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                      animationDuration={150}
+                      contentStyle={{
+                        backgroundColor: '#1e1e1e',
+                        border: '1px solid #333',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                      }}
                     />
-                    <Bar 
-                      dataKey="vendas" 
+                    <Bar
+                      dataKey="vendas"
                       name="Vendas"
                       fill="url(#colorVendas)"
-                      radius={[8, 8, 0, 0]}
-                      animationDuration={800}
+                      radius={[10, 10, 0, 0]}
+                      animationDuration={1000}
                       animationEasing="ease-out"
-                    />
+                      stroke="#60a5fa"
+                      strokeWidth={0}
+                    >
+                      {charts.salesByMonth.map((entry: any, index: number) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.vendas > 0 ? "url(#colorVendas)" : "#2a2a2a"}
+                        />
+                      ))}
+                      <LabelList
+                        dataKey="vendas"
+                        position="top"
+                        fill="#e5e5e5"
+                        fontSize={12}
+                        fontWeight={600}
+                        formatter={(value: number) => value > 0 ? value : ''}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center h-[320px] text-center px-4"
@@ -383,7 +416,7 @@ export default function DashboardPage() {
               )}
             </motion.div>
 
-            {/* PieChart - Status dos Pedidos */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -394,11 +427,11 @@ export default function DashboardPage() {
                 <PieChartIcon className="w-6 h-6 text-primary" />
                 Status dos Pedidos
               </h3>
-              
+
               {charts.statusPedidos.some(s => s.value > 0) ? (() => {
                 const filteredData = charts.statusPedidos.filter(s => s.value > 0)
                 const total = filteredData.reduce((sum, item) => sum + item.value, 0)
-                
+
                 return (
                   <ResponsiveContainer width="100%" height={320}>
                     <PieChart>
@@ -422,8 +455,8 @@ export default function DashboardPage() {
                         animationEasing="ease-out"
                       >
                         {filteredData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
+                          <Cell
+                            key={`cell-${index}`}
                             fill={`url(#gradient-${index})`}
                             stroke={entry.color}
                             strokeWidth={2}
@@ -431,7 +464,7 @@ export default function DashboardPage() {
                         ))}
                       </Pie>
                       <Tooltip content={<StatusTooltip />} />
-                      {/* Total no centro */}
+                      {}
                       <text
                         x="50%"
                         y="45%"
@@ -453,7 +486,7 @@ export default function DashboardPage() {
                       >
                         Pedidos
                       </text>
-                      <Legend 
+                      <Legend
                         verticalAlign="bottom"
                         height={60}
                         iconType="circle"
@@ -467,7 +500,7 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 )
               })() : (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center h-[320px] text-center px-4"
@@ -484,7 +517,7 @@ export default function DashboardPage() {
             </motion.div>
           </div>
 
-          {/* Faturamento Acumulado */}
+          {}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -495,10 +528,10 @@ export default function DashboardPage() {
               <TrendingUp className="w-6 h-6 text-primary" />
               Faturamento Acumulado
             </h3>
-            
+
             {charts.faturamentoAcumulado.length > 0 && charts.faturamentoAcumulado.some((f: any) => f.faturamento > 0) ? (
               <ResponsiveContainer width="100%" height={350}>
-                <AreaChart 
+                <AreaChart
                   data={charts.faturamentoAcumulado}
                   margin={{ top: 20, right: 20, left: 10, bottom: 10 }}
                 >
@@ -517,16 +550,16 @@ export default function DashboardPage() {
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" opacity={0.3} />
-                  <XAxis 
-                    dataKey="mes" 
-                    stroke="#888" 
+                  <XAxis
+                    dataKey="mes"
+                    stroke="#888"
                     fontSize={13}
                     fontWeight={500}
                     tickLine={false}
                     axisLine={{ stroke: '#333' }}
                   />
-                  <YAxis 
-                    stroke="#888" 
+                  <YAxis
+                    stroke="#888"
                     fontSize={13}
                     fontWeight={500}
                     tickLine={false}
@@ -534,18 +567,18 @@ export default function DashboardPage() {
                     tickFormatter={(v) => formatPrice(v)}
                     domain={[0, 'auto']}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<RevenueTooltip />}
                     cursor={{ stroke: '#22c55e', strokeWidth: 2, strokeDasharray: '5 5' }}
                     animationDuration={200}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="faturamento" 
+                  <Area
+                    type="monotone"
+                    dataKey="faturamento"
                     name="Faturamento"
-                    stroke="#22c55e" 
+                    stroke="#22c55e"
                     strokeWidth={3}
-                    fillOpacity={1} 
+                    fillOpacity={1}
                     fill="url(#colorFaturamento)"
                     animationDuration={1000}
                     animationEasing="ease-out"
@@ -554,7 +587,7 @@ export default function DashboardPage() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center h-[350px] text-center px-4"
@@ -572,7 +605,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Pedidos Recentes */}
+      {}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

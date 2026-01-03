@@ -5,7 +5,6 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ClientProviders from '@/components/ClientProviders'
 
-// Fontes premium
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',

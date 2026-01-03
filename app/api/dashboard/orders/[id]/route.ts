@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OrderStatus, PaymentMethod } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -64,7 +63,7 @@ export async function GET(
       status: order.status,
       dataPedido: order.createdAt.toISOString(),
       entrega: {
-        data: null, // Campo não existe no schema Prisma
+        data: null,
         observacoes: '',
       },
     }
@@ -82,7 +81,6 @@ export async function GET(
   }
 }
 
-// PATCH - Atualizar status do pedido
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -93,7 +91,6 @@ export async function PATCH(
 
     const { status } = body
 
-    // Validar status se fornecido
     if (status && !Object.values(OrderStatus).includes(status)) {
       return NextResponse.json(
         { error: 'Status inválido' },

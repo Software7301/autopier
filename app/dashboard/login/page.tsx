@@ -18,7 +18,6 @@ export default function DashboardLoginPage() {
     setError('')
     setLoading(true)
 
-    // Verificar senha
     setTimeout(() => {
       if (password === 'autopier') {
         router.push('/dashboard')
@@ -31,14 +30,14 @@ export default function DashboardLoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Background decorativo */}
+      {}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
+        {}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-4">
             <div className="relative w-16 h-16">
@@ -56,7 +55,7 @@ export default function DashboardLoginPage() {
           <p className="text-text-secondary mt-2">Painel Administrativo</p>
         </div>
 
-        {/* Card de Login */}
+        {}
         <div className="card-static p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -69,7 +68,7 @@ export default function DashboardLoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Senha */}
+            {}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
                 Senha de Acesso
@@ -99,14 +98,14 @@ export default function DashboardLoginPage() {
               </div>
             </div>
 
-            {/* Erro */}
+            {}
             {error && (
               <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
                 {error}
               </div>
             )}
 
-            {/* Botão Login */}
+            {}
             <button
               type="submit"
               disabled={loading || !password}
@@ -127,10 +126,10 @@ export default function DashboardLoginPage() {
           </form>
         </div>
 
-        {/* Link voltar */}
+        {}
         <div className="text-center mt-6">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-text-muted hover:text-primary transition-colors text-sm flex items-center justify-center gap-2"
           >
             <Car className="w-4 h-4" />

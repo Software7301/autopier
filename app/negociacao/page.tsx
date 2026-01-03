@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ArrowRight, 
-  Car, 
-  ShoppingBag, 
+import {
+  ArrowRight,
+  Car,
+  ShoppingBag,
   MessageCircle,
   DollarSign,
   Calendar,
@@ -27,7 +27,6 @@ export default function NegociacaoPage() {
   const [loading, setLoading] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
 
-  // Form state para venda
   const [sellForm, setSellForm] = useState({
     vehicleName: '',
     vehicleBrand: '',
@@ -39,12 +38,10 @@ export default function NegociacaoPage() {
     customerPhone: '',
     vehicleImageUrl: '',
   })
-  
-  // Estado para preview da imagem
+
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
 
-  // Form state para compra
   const [buyForm, setBuyForm] = useState({
     vehicleInterest: '',
     customerName: '',
@@ -52,25 +49,22 @@ export default function NegociacaoPage() {
     message: '',
   })
 
-  // Handler para selecionar imagem
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-      // Validar tipo de arquivo
+
       if (!file.type.startsWith('image/')) {
         alert('Por favor, selecione apenas arquivos de imagem')
         return
       }
-      
-      // Validar tamanho (máximo 5MB)
+
       if (file.size > 5 * 1024 * 1024) {
         alert('A imagem deve ter no máximo 5MB')
         return
       }
-      
+
       setImageFile(file)
-      
-      // Criar preview
+
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
@@ -78,49 +72,40 @@ export default function NegociacaoPage() {
       reader.readAsDataURL(file)
     }
   }
-  
-  // Handler para remover imagem
+
   function handleRemoveImage() {
     setImageFile(null)
     setImagePreview(null)
     setSellForm({ ...sellForm, vehicleImageUrl: '' })
   }
 
-  // Handler para formatar valor em tempo real
   function handlePriceChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
-    
-    // Remove tudo que não é número
+
     const numbersOnly = value.replace(/\D/g, '')
-    
-    // Se não há números, limpa o campo
+
     if (!numbersOnly) {
       setSellForm({ ...sellForm, proposedPrice: '' })
       return
     }
-    
-    // Converte para número (trata como centavos)
+
     const numericValue = parseInt(numbersOnly, 10)
-    
-    // Formata no padrão brasileiro (2.000.000,00)
-    // Divide por 100 para tratar os últimos 2 dígitos como decimais
+
     const formatted = new Intl.NumberFormat('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(numericValue / 100)
-    
+
     setSellForm({ ...sellForm, proposedPrice: formatted })
   }
 
-  // Handler para iniciar negociação
   async function handleStartNegotiation(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
 
     try {
       let imageUrl = sellForm.vehicleImageUrl
-      
-      // Se há uma imagem selecionada, fazer upload
+
       if (imageFile) {
         setUploadingImage(true)
         try {
@@ -136,7 +121,7 @@ export default function NegociacaoPage() {
           setUploadingImage(false)
         }
       }
-      
+
       const payload = negotiationType === 'SELL'
         ? {
             type: 'SELL',
@@ -167,11 +152,11 @@ export default function NegociacaoPage() {
       const data = await response.json()
 
       if (response.ok && data.id) {
-        // Salvar telefone para reconexão futura
+
         const phone = negotiationType === 'SELL' ? sellForm.customerPhone : buyForm.customerPhone
         localStorage.setItem('autopier_user_phone', phone.replace(/\D/g, ''))
         localStorage.setItem('autopier_user_name', negotiationType === 'SELL' ? sellForm.customerName : buyForm.customerName)
-        
+
         router.push(`/negociacao/${data.id}`)
       } else {
         alert('Erro ao iniciar negociação. Tente novamente.')
@@ -187,21 +172,21 @@ export default function NegociacaoPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
             <span className="text-gradient">Negociação</span> de Veículos
           </h1>
           <p className="text-text-secondary text-lg max-w-2xl mx-auto">
-            Quer vender seu carro ou está interessado em um veículo? 
+            Quer vender seu carro ou está interessado em um veículo?
             Inicie uma negociação e converse diretamente com nossa equipe.
           </p>
         </div>
 
-        {/* Seleção de Tipo */}
+        {}
         {!negotiationType && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Vender Veículo */}
+            {}
             <button
               onClick={() => setNegotiationType('SELL')}
               className="card p-8 text-left group"
@@ -221,7 +206,7 @@ export default function NegociacaoPage() {
               </span>
             </button>
 
-            {/* Comprar Veículo */}
+            {}
             <Link
               href="/cars"
               className="card p-8 text-left group"
@@ -243,7 +228,7 @@ export default function NegociacaoPage() {
           </div>
         )}
 
-        {/* Formulário de Venda */}
+        {}
         {negotiationType === 'SELL' && (
           <div className="card-static p-8 animate-fade-in">
             <div className="flex items-center justify-between mb-8">
@@ -265,7 +250,7 @@ export default function NegociacaoPage() {
             </div>
 
             <form onSubmit={handleStartNegotiation} className="space-y-6">
-              {/* Dados do Veículo */}
+              {}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -359,7 +344,7 @@ export default function NegociacaoPage() {
                 />
               </div>
 
-              {/* Upload de Imagem */}
+              {}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   <ImageIcon className="w-4 h-4 inline mr-2" />
@@ -369,51 +354,7 @@ export default function NegociacaoPage() {
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      className="hidden"
-                      id="vehicle-image-upload"
-                    />
-                    <label
-                      htmlFor="vehicle-image-upload"
-                      className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-surface-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-surface/50"
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-10 h-10 mb-3 text-text-muted" />
-                        <p className="mb-2 text-sm text-text-secondary">
-                          <span className="font-semibold">Clique para fazer upload</span> ou arraste a imagem
-                        </p>
-                        <p className="text-xs text-text-muted">
-                          PNG, JPG, WEBP até 5MB
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="relative w-full">
-                    <div className="relative w-full h-64 rounded-lg overflow-hidden border border-surface-border">
-                      <Image
-                        src={imagePreview}
-                        alt="Preview do veículo"
-                        fill
-                        className="object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="absolute top-2 right-2 p-2 bg-background-secondary/90 hover:bg-background-secondary rounded-full transition-colors"
-                      >
-                        <X className="w-5 h-5 text-white" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-text-muted mt-2">
-                      Clique no X para remover a imagem
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Dados do Cliente */}
+                      accept="image}
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -472,7 +413,7 @@ export default function NegociacaoPage() {
           </div>
         )}
 
-        {/* Formulário de Compra */}
+        {}
         {negotiationType === 'BUY' && (
           <div className="card-static p-8 animate-fade-in">
             <div className="flex items-center justify-between mb-8">
@@ -523,7 +464,7 @@ export default function NegociacaoPage() {
                 />
               </div>
 
-              {/* Dados do Cliente */}
+              {}
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -575,7 +516,7 @@ export default function NegociacaoPage() {
               </button>
             </form>
 
-            {/* Link para catálogo */}
+            {}
             <div className="mt-6 text-center">
               <p className="text-text-muted text-sm">
                 Já sabe qual veículo quer?{' '}

@@ -9,7 +9,7 @@ export default function Footer() {
     <footer className="bg-background-secondary border-t border-surface-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-          {/* Brand */}
+          {}
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20 group-hover:border-primary/50 transition-all duration-300">
@@ -51,7 +51,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Links Rápidos */}
+          {}
           <div>
             <h3 className="text-white font-semibold text-lg mb-6">Links Rápidos</h3>
             <ul className="space-y-4">
@@ -72,7 +72,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contato */}
+          {}
           <div>
             <h3 className="text-white font-semibold text-lg mb-6">Contato</h3>
             <ul className="space-y-4">
@@ -92,7 +92,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Bar */}
+        {}
         <div className="mt-12 pt-8 border-t border-surface-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-text-muted text-sm">
             © {currentYear} AutoPier. Todos os direitos reservados.

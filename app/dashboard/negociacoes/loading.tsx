@@ -1,7 +1,7 @@
 export default function NegociacoesLoading() {
   return (
     <div className="space-y-6 animate-pulse">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <div className="h-8 bg-surface-card rounded w-40 mb-2" />
@@ -9,7 +9,7 @@ export default function NegociacoesLoading() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
           <div key={i} className="card p-6">
@@ -24,14 +24,14 @@ export default function NegociacoesLoading() {
         ))}
       </div>
 
-      {/* Filter Pills */}
+      {}
       <div className="flex gap-3">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-10 bg-surface-card rounded-full w-28" />
         ))}
       </div>
 
-      {/* Negotiations List */}
+      {}
       <div className="grid gap-4">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="card p-6">

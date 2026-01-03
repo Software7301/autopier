@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NegotiationStatus, NegotiationType, CarCategory } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar negociações ativas para exibir na home
 export async function GET(request: NextRequest) {
   try {
-    // Filtrar apenas negociações ativas
+
     const negotiations = await prisma.negotiation.findMany({
       where: {
         status: {
@@ -36,7 +34,6 @@ export async function GET(request: NextRequest) {
     const formattedNegotiations = negotiations.map((neg) => {
       const lastMessage = neg.messages[0]
 
-      // Contar interessados (número de mensagens de clientes diferentes)
       const uniqueBuyers = new Set(
         neg.messages
           .filter(m => m.sender.role === 'CUSTOMER')
@@ -44,7 +41,6 @@ export async function GET(request: NextRequest) {
       )
       const interessados = uniqueBuyers.size || 1
 
-      // Calcular última atividade
       const lastActivity = lastMessage?.createdAt || neg.updatedAt || neg.createdAt
       const lastActivityDate = new Date(lastActivity)
       const now = new Date()
@@ -63,7 +59,6 @@ export async function GET(request: NextRequest) {
         lastActivityText = `há ${days} dia${days > 1 ? 's' : ''}`
       }
 
-      // Determinar categoria do veículo
       let category: CarCategory = CarCategory.SUV
       if (neg.car) {
         category = neg.car.category
@@ -95,7 +90,7 @@ export async function GET(request: NextRequest) {
           categoria: category,
           imagem:
             neg.car?.imageUrl ||
-            'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800',
+            'https:
           ano: isVenda ? (neg.vehicleYear || neg.car?.year || null) : (neg.car?.year || null),
         },
         status: 'Em negociação',
@@ -123,7 +118,6 @@ export async function GET(request: NextRequest) {
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
-    // Erros de conexão do Prisma
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||

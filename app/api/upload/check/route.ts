@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Rota para verificar configuração do Supabase Storage
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  // Usar APENAS variáveis de ambiente
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
+
   let supabase = null
   if (supabaseUrl && supabaseKey) {
     supabase = createClient(supabaseUrl, supabaseKey)
@@ -22,11 +21,10 @@ export async function GET() {
     bucketError: null as string | null,
   }
 
-  // Tentar verificar se o bucket existe
   if (supabase) {
     try {
       const { data: buckets, error } = await supabase.storage.listBuckets()
-      
+
       if (error) {
         checks.bucketError = error.message
       } else {
@@ -51,7 +49,7 @@ export async function GET() {
       not_configured: {
         title: '⚠️ Variáveis não configuradas',
         steps: [
-          '1. Acesse o painel da Vercel: https://vercel.com',
+          '1. Acesse o painel da Vercel: https:
           '2. Vá em Settings > Environment Variables',
           '3. Adicione NEXT_PUBLIC_SUPABASE_URL',
           '4. Adicione NEXT_PUBLIC_SUPABASE_ANON_KEY',

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar carro por ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,11 +13,11 @@ export async function GET(
     const { id } = await params
     carId = id
     console.log('🚗 [Cars API] Buscando carro:', id)
-    
+
     const car = await prisma.car.findUnique({
       where: { id },
     })
-    
+
     if (!car) {
       console.error('❌ [Cars API] Veículo não encontrado:', id)
       return NextResponse.json(
@@ -35,9 +33,9 @@ export async function GET(
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao buscar veículo',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },
@@ -46,7 +44,6 @@ export async function GET(
   }
 }
 
-// PUT - Atualizar veículo
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -54,7 +51,7 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    
+
     const {
       name,
       brand,
@@ -71,7 +68,6 @@ export async function PUT(
       available,
     } = body
 
-    // Validações obrigatórias
     if (!name || !brand || !model || !year || !price || !category || !imageUrl) {
       return NextResponse.json(
         { error: 'Campos obrigatórios: name, brand, model, year, price, category, imageUrl' },
@@ -79,7 +75,6 @@ export async function PUT(
       )
     }
 
-    // Validar categoria
     const validCategories = ['SUV', 'SEDAN', 'COMPACTO', 'ESPORTIVO']
     if (!validCategories.includes(category)) {
       return NextResponse.json(
@@ -110,7 +105,7 @@ export async function PUT(
     return NextResponse.json(car)
   } catch (error: any) {
     console.error('Erro ao atualizar veículo:', error)
-    
+
     if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Veículo não encontrado' },
@@ -125,7 +120,6 @@ export async function PUT(
   }
 }
 
-// DELETE - Deletar veículo
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -135,7 +129,6 @@ export async function DELETE(
     const { id } = await params
     carId = id
 
-    // Validar se o ID foi fornecido
     if (!id || typeof id !== 'string' || id.trim() === '') {
       console.error('❌ [DELETE /api/cars/[id]] ID inválido ou não fornecido')
       return NextResponse.json(
@@ -146,7 +139,6 @@ export async function DELETE(
 
     console.log('🗑️ [DELETE /api/cars/[id]] Iniciando exclusão do veículo:', id)
 
-    // Verificar se o veículo existe antes de deletar
     const existingCar = await prisma.car.findUnique({
       where: { id },
       select: { id: true, name: true, brand: true },
@@ -166,7 +158,6 @@ export async function DELETE(
       brand: existingCar.brand,
     })
 
-    // Deletar o veículo
     await prisma.car.delete({
       where: { id },
     })
@@ -174,7 +165,7 @@ export async function DELETE(
     console.log('✅ [DELETE /api/cars/[id]] Veículo deletado com sucesso:', id)
 
     return NextResponse.json(
-      { 
+      {
         success: true,
         message: 'Veículo deletado com sucesso',
         deletedId: id,
@@ -188,7 +179,6 @@ export async function DELETE(
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Erro específico do Prisma: registro não encontrado
     if (error.code === 'P2025') {
       console.warn('⚠️ [DELETE /api/cars/[id]] Veículo não encontrado (P2025):', carId)
       return NextResponse.json(
@@ -197,11 +187,10 @@ export async function DELETE(
       )
     }
 
-    // Erros de validação
     if (error.code === 'P2003') {
       console.error('❌ [DELETE /api/cars/[id]] Erro de foreign key constraint')
       return NextResponse.json(
-        { 
+        {
           error: 'Não é possível deletar este veículo. Ele está sendo usado em pedidos ou negociações.',
           code: 'FOREIGN_KEY_CONSTRAINT',
         },
@@ -209,9 +198,8 @@ export async function DELETE(
       )
     }
 
-    // Erro genérico
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao deletar veículo',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         code: error.code || 'UNKNOWN_ERROR',

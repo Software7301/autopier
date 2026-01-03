@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { 
-  ArrowLeft, 
-  Send, 
-  Car, 
+import {
+  ArrowLeft,
+  Send,
+  Car,
   Users,
   Calendar,
   Phone,
@@ -98,8 +98,7 @@ export default function NegociacaoChatPage() {
   const [loading, setLoading] = useState(true)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
-  
-  // Função para obter nome do funcionário
+
   function getEmployeeName(): string {
     try {
       const savedEmployee = localStorage.getItem('autopier_employee')
@@ -114,22 +113,19 @@ export default function NegociacaoChatPage() {
     }
     return 'AutoPier'
   }
-  
-  // Estados para notificações e digitação
+
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState({ title: '', message: '' })
   const lastTypingSentRef = useRef<number>(0)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const prevMessagesCountRef = useRef<number>(0)
-  
+
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  
-  // Hook de notificações
+
   const { permission, requestPermission, notifyNewMessage, playSound, isTabActive } = useNotifications()
 
-  // Buscar dados da negociação
   useEffect(() => {
     async function fetchNegociacao() {
       try {
@@ -138,7 +134,7 @@ export default function NegociacaoChatPage() {
           const data = await response.json()
           setNegociacao(data)
           setMessages(data.mensagens || [])
-          // IMPORTANTE: Inicializar o contador de mensagens
+
           prevMessagesCountRef.current = (data.mensagens || []).length
           console.log('📋 [Dashboard] Carregamento inicial:', {
             messagesCount: (data.mensagens || []).length,
@@ -156,43 +152,39 @@ export default function NegociacaoChatPage() {
     fetchNegociacao()
   }, [negociacaoId])
 
-  // Polling para novas mensagens + verificar digitação
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!negociacaoId) return
       try {
-        // Buscar novas mensagens
+
         const response = await fetch(`/api/dashboard/negotiations/${negociacaoId}/messages`)
         if (response.ok) {
           const newMessages = await response.json()
           if (newMessages.length > messages.length) {
-            // Verificar se é uma mensagem de cliente
+
             const lastNewMessage = newMessages[newMessages.length - 1]
-            
+
             console.log('📩 [Dashboard] Nova mensagem detectada:', {
               senderName: lastNewMessage?.senderName,
               sender: lastNewMessage?.sender,
               prevCount: prevMessagesCountRef.current,
               newCount: newMessages.length,
             })
-            
+
             if (lastNewMessage && lastNewMessage.sender === 'cliente') {
-              // Notificar apenas se não for a primeira carga
+
               if (prevMessagesCountRef.current > 0) {
                 console.log('🔔 [Dashboard] Disparando notificação!')
-                
-                // SEMPRE tocar som
+
                 playSound()
-                
-                // SEMPRE mostrar toast
+
                 setToastMessage({
                   title: `${lastNewMessage.senderName || 'Cliente'}`,
                   message: lastNewMessage.content,
                 })
                 setShowToast(true)
                 setTimeout(() => setShowToast(false), 4000)
-                
-                // Se aba em segundo plano, também mostrar notificação do navegador
+
                 if (!isTabActive()) {
                   notifyNewMessage(
                     lastNewMessage.senderName || 'Cliente',
@@ -211,7 +203,6 @@ export default function NegociacaoChatPage() {
           }
         }
 
-        // Verificar se cliente está digitando
         const typingResponse = await fetch(`/api/typing?chatId=${negociacaoId}`)
         if (typingResponse.ok) {
           const typingData = await typingResponse.json()
@@ -220,12 +211,11 @@ export default function NegociacaoChatPage() {
       } catch (error) {
         console.error('Erro ao buscar mensagens:', error)
       }
-    }, 2000) // Atualiza a cada 2 segundos
+    }, 2000)
 
     return () => clearInterval(interval)
   }, [negociacaoId, messages.length, notifyNewMessage, playSound, isTabActive])
 
-  // Enviar status de digitação
   const sendTypingStatus = useCallback(async (typing: boolean) => {
     if (!negociacaoId) return
     try {
@@ -239,35 +229,30 @@ export default function NegociacaoChatPage() {
         }),
       })
     } catch (error) {
-      // Erro silencioso
+
     }
   }, [negociacaoId])
 
-  // Handler para digitação
   const handleTyping = useCallback(() => {
     const now = Date.now()
-    
-    // Evitar spam - só enviar a cada 2 segundos
+
     if (now - lastTypingSentRef.current > 2000) {
       lastTypingSentRef.current = now
       sendTypingStatus(true)
     }
 
-    // Resetar timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current)
     }
 
-    // Parar de digitar após 3 segundos de inatividade
     typingTimeoutRef.current = setTimeout(() => {
       sendTypingStatus(false)
     }, 3000)
   }, [sendTypingStatus])
 
-  // Solicitar permissão de notificação
   useEffect(() => {
     if (permission === 'default') {
-      // Solicitar após 3 segundos para não ser intrusivo
+
       const timer = setTimeout(() => {
         requestPermission()
       }, 3000)
@@ -275,7 +260,6 @@ export default function NegociacaoChatPage() {
     }
   }, [permission, requestPermission])
 
-  // Limpar timeout ao desmontar
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -313,13 +297,12 @@ export default function NegociacaoChatPage() {
       if (response.ok) {
         const sentMessage = await response.json()
         setMessages((prev) => [...prev, sentMessage])
-        
-        // Atualizar status se estava pendente
+
         if (negociacao?.status === 'PENDING') {
           setNegociacao({ ...negociacao, status: 'IN_PROGRESS' })
         }
       } else {
-        // Fallback: adicionar localmente
+
         const employeeName = getEmployeeName()
         const localMessage: Message = {
           id: `msg-${Date.now()}`,
@@ -332,7 +315,7 @@ export default function NegociacaoChatPage() {
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      // Fallback: adicionar localmente
+
       const localMessage: Message = {
         id: `msg-${Date.now()}`,
         content: messageContent,
@@ -395,7 +378,7 @@ export default function NegociacaoChatPage() {
 
   return (
     <div className="space-y-6">
-      {/* Toast de Notificação */}
+      {}
       <NotificationToast
         show={showToast}
         title={toastMessage.title}
@@ -403,7 +386,7 @@ export default function NegociacaoChatPage() {
         onClose={() => setShowToast(false)}
       />
 
-      {/* Header */}
+      {}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
@@ -423,7 +406,7 @@ export default function NegociacaoChatPage() {
           </div>
         </div>
 
-        {/* Seletor de Status */}
+        {}
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-text-muted text-sm">Status:</span>
           <div className="flex gap-2 flex-wrap">
@@ -449,9 +432,9 @@ export default function NegociacaoChatPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna Principal - Chat */}
+        {}
         <div className="lg:col-span-2 card-static flex flex-col overflow-hidden">
-          {/* Header do Chat */}
+          {}
           <div className="p-5 border-b border-surface-border bg-surface-dark/30">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
@@ -469,8 +452,8 @@ export default function NegociacaoChatPage() {
             </div>
           </div>
 
-          {/* Área de Mensagens */}
-          <div 
+          {}
+          <div
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-5 space-y-4 min-h-[400px] max-h-[500px]"
           >
@@ -493,8 +476,8 @@ export default function NegociacaoChatPage() {
                       key={message.id}
                       initial={{ opacity: 0, x: isOwn ? 20 : -20, y: 10 }}
                       animate={{ opacity: 1, x: 0, y: 0 }}
-                      transition={{ 
-                        duration: 0.25, 
+                      transition={{
+                        duration: 0.25,
                         ease: "easeOut",
                         type: "spring",
                         stiffness: 500,
@@ -508,8 +491,8 @@ export default function NegociacaoChatPage() {
                             {message.senderName}
                           </p>
                         )}
-                        
-                        <motion.div 
+
+                        <motion.div
                           initial={{ scale: 0.95 }}
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.15, ease: "easeOut" }}
@@ -526,15 +509,15 @@ export default function NegociacaoChatPage() {
                 })}
               </AnimatePresence>
             )}
-            
-            {/* Indicador de Digitação */}
-            <TypingIndicator 
-              isTyping={otherUserTyping} 
+
+            {}
+            <TypingIndicator
+              isTyping={otherUserTyping}
               userName={negociacao.cliente.nome}
             />
           </div>
 
-          {/* Input de Mensagem */}
+          {}
           <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
             <div className="flex items-center gap-4">
               <input
@@ -573,9 +556,9 @@ export default function NegociacaoChatPage() {
           </form>
         </div>
 
-        {/* Coluna Lateral - Detalhes */}
+        {}
         <div className="space-y-5">
-          {/* Veículo */}
+          {}
           <div className="card-static overflow-hidden">
             <div className="relative h-40 bg-surface-dark">
               {negociacao.veiculo.imageUrl ? (
@@ -613,13 +596,13 @@ export default function NegociacaoChatPage() {
             </div>
           </div>
 
-          {/* Cliente */}
+          {}
           <div className="card-static p-5 space-y-4">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
               <h3 className="font-semibold text-white">Dados do Cliente</h3>
             </div>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-text-muted text-sm">Nome</p>
@@ -644,10 +627,10 @@ export default function NegociacaoChatPage() {
             </div>
           </div>
 
-          {/* Ações Rápidas */}
+          {}
           <div className="card-static p-5 space-y-3">
             <h3 className="font-semibold text-white">Ações Rápidas</h3>
-            
+
             <button
               onClick={() => handleStatusChange('COMPLETED')}
               className="btn-primary w-full flex items-center justify-center gap-2"
@@ -655,7 +638,7 @@ export default function NegociacaoChatPage() {
               <CheckCircle className="w-5 h-5" />
               Concluir Negociação
             </button>
-            
+
             <button
               onClick={() => setNewMessage(`Olá ${negociacao.cliente.nome}! Obrigado pelo interesse no ${negociacao.veiculo.nome}. Como posso ajudar?`)}
               className="btn-secondary w-full flex items-center justify-center gap-2"

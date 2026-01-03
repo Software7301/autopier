@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ArrowLeft, 
-  Send, 
-  Car, 
+import {
+  ArrowLeft,
+  Send,
+  Car,
   Users,
   Calendar,
   CreditCard,
@@ -99,8 +99,7 @@ export default function PedidoDetalhePage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
-  
-  // Função para obter nome do funcionário
+
   function getEmployeeName(): string {
     try {
       const savedEmployee = localStorage.getItem('autopier_employee')
@@ -115,34 +114,29 @@ export default function PedidoDetalhePage() {
     }
     return 'AutoPier'
   }
-  
-  // Estados para notificações
+
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState({ title: '', message: '' })
   const prevMessagesCountRef = useRef<number>(0)
-  
-  // Estados para animação de finalização
+
   const [isCompleting, setIsCompleting] = useState(false)
   const [isFadingOut, setIsFadingOut] = useState(false)
 
-  // Agendamento de entrega
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [deliveryDateInput, setDeliveryDateInput] = useState('')
   const [deliveryNotes, setDeliveryNotes] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [scheduleError, setScheduleError] = useState('')
-  
+
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  
-  // Hook de notificações
+
   const { playSound, notifyNewMessage, isTabActive } = useNotifications()
 
-  // Buscar dados do pedido e mensagens
   useEffect(() => {
     async function fetchData() {
       try {
-        // Buscar pedido
+
         const orderResponse = await fetch(`/api/dashboard/orders/${pedidoId}`)
         if (orderResponse.ok) {
           const data = await orderResponse.json()
@@ -151,13 +145,12 @@ export default function PedidoDetalhePage() {
           setPedido(null)
         }
 
-        // Buscar mensagens do chat
         const chatResponse = await fetch(`/api/pedido/${pedidoId}/chat`)
         if (chatResponse.ok) {
           const chatData = await chatResponse.json()
           const initialMessages = chatData.messages || []
           setMessages(initialMessages)
-          // IMPORTANTE: Inicializar o contador de mensagens
+
           prevMessagesCountRef.current = initialMessages.length
           console.log('📋 [Dashboard Pedidos] Carregamento inicial:', {
             messagesCount: initialMessages.length,
@@ -173,11 +166,10 @@ export default function PedidoDetalhePage() {
     fetchData()
   }, [pedidoId])
 
-  // Polling para novas mensagens + verificar mensagens do cliente
   useEffect(() => {
-    // Não fazer polling se o pedido estiver finalizado ou se estiver completando
+
     if (pedido?.status === 'COMPLETED' || isCompleting) return
-    
+
     const interval = setInterval(async () => {
       if (!pedidoId) return
       try {
@@ -185,33 +177,30 @@ export default function PedidoDetalhePage() {
         if (response.ok) {
           const data = await response.json()
           if (data.messages && data.messages.length > messages.length) {
-            // Verificar se é uma mensagem de cliente
+
             const lastNewMessage = data.messages[data.messages.length - 1]
-            
+
             console.log('📩 [Dashboard Pedidos] Nova mensagem detectada:', {
               senderName: lastNewMessage?.senderName,
               sender: lastNewMessage?.sender,
               prevCount: prevMessagesCountRef.current,
               newCount: data.messages.length,
             })
-            
+
             if (lastNewMessage && lastNewMessage.sender === 'cliente') {
-              // Notificar apenas se não for a primeira carga
+
               if (prevMessagesCountRef.current > 0) {
                 console.log('🔔 [Dashboard Pedidos] Disparando notificação!')
-                
-                // SEMPRE tocar som
+
                 playSound()
-                
-                // SEMPRE mostrar toast
+
                 setToastMessage({
                   title: `${lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente'}`,
                   message: lastNewMessage.content,
                 })
                 setShowToast(true)
                 setTimeout(() => setShowToast(false), 4000)
-                
-                // Se aba em segundo plano, também mostrar notificação do navegador
+
                 if (!isTabActive()) {
                   notifyNewMessage(
                     lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente',
@@ -225,15 +214,15 @@ export default function PedidoDetalhePage() {
             } else {
               console.log('⏭️ [Dashboard Pedidos] Mensagem própria (funcionário) - não notificar')
             }
-            
+
             setMessages(data.messages)
             prevMessagesCountRef.current = data.messages.length
           }
         }
       } catch (error) {
-        // Silenciar erros de polling
+
       }
-    }, 2000) // A cada 2 segundos (mais rápido que antes)
+    }, 2000)
 
     return () => clearInterval(interval)
   }, [pedidoId, messages.length, pedido?.cliente.nome, pedido?.status, isCompleting, playSound, notifyNewMessage, isTabActive])
@@ -283,7 +272,6 @@ export default function PedidoDetalhePage() {
   async function handleStatusChange(newStatus: string) {
     if (!pedido) return
 
-    // Se estiver mudando de PENDING para PROCESSING, enviar mensagem automática
     if (pedido.status === 'PENDING' && newStatus === 'PROCESSING') {
       try {
         await fetch(`/api/pedido/${pedidoId}/chat`, {
@@ -297,30 +285,26 @@ export default function PedidoDetalhePage() {
         })
       } catch (messageError) {
         console.error('Erro ao enviar mensagem automática:', messageError)
-        // Não bloquear se a mensagem falhar, apenas logar
+
       }
     }
 
-    // Se for finalizar, iniciar processo de animação
     if (newStatus === 'COMPLETED') {
       setIsCompleting(true)
-      
+
       try {
         await fetch(`/api/dashboard/orders/${pedidoId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus }),
         })
-        
-        // Atualizar estado local
+
         setPedido({ ...pedido, status: newStatus })
-        
-        // Iniciar animação de desvanecimento após um pequeno delay
+
         setTimeout(() => {
           setIsFadingOut(true)
         }, 500)
-        
-        // Redirecionar após 3 segundos
+
         setTimeout(() => {
           router.push('/dashboard/pedidos')
         }, 3000)
@@ -329,7 +313,7 @@ export default function PedidoDetalhePage() {
         setIsCompleting(false)
       }
     } else {
-      // Para outros status, apenas atualizar normalmente
+
       try {
         await fetch(`/api/dashboard/orders/${pedidoId}`, {
           method: 'PATCH',
@@ -421,21 +405,21 @@ export default function PedidoDetalhePage() {
   const currentStatus = statusLabels[pedido.status] || statusLabels.PENDING
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       initial={{ opacity: 1 }}
       animate={{ opacity: isFadingOut ? 0 : 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
-      {/* Toast de Notificação */}
+      {}
       <NotificationToast
         show={showToast}
         title={toastMessage.title}
         message={toastMessage.message}
         onClose={() => setShowToast(false)}
       />
-      
-      {/* Mensagem de Finalização */}
+
+      {}
       {isCompleting && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -453,8 +437,8 @@ export default function PedidoDetalhePage() {
           </div>
         </motion.div>
       )}
-      
-      {/* Header */}
+
+      {}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
@@ -473,7 +457,7 @@ export default function PedidoDetalhePage() {
           </div>
         </div>
 
-        {/* Seletor de Status */}
+        {}
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-text-muted text-sm">Status:</span>
           <div className="flex gap-2 flex-wrap">
@@ -499,9 +483,9 @@ export default function PedidoDetalhePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna Principal - Chat */}
+        {}
         <div className="lg:col-span-2 card-static flex flex-col overflow-hidden">
-          {/* Header do Chat */}
+          {}
           <div className="p-5 border-b border-surface-border">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
@@ -514,8 +498,8 @@ export default function PedidoDetalhePage() {
             </div>
           </div>
 
-          {/* Área de Mensagens */}
-          <div 
+          {}
+          <div
             ref={messagesContainerRef}
             className="flex-1 overflow-y-auto p-5 space-y-4 min-h-[350px] max-h-[450px]"
           >
@@ -536,8 +520,8 @@ export default function PedidoDetalhePage() {
                       key={message.id}
                       initial={{ opacity: 0, x: isOwn ? 20 : -20, y: 10 }}
                       animate={{ opacity: 1, x: 0, y: 0 }}
-                      transition={{ 
-                        duration: 0.25, 
+                      transition={{
+                        duration: 0.25,
                         ease: "easeOut",
                         type: "spring",
                         stiffness: 500,
@@ -551,8 +535,8 @@ export default function PedidoDetalhePage() {
                             {message.senderName}
                           </p>
                         )}
-                        
-                        <motion.div 
+
+                        <motion.div
                           initial={{ scale: 0.95 }}
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.15, ease: "easeOut" }}
@@ -571,7 +555,7 @@ export default function PedidoDetalhePage() {
             )}
           </div>
 
-          {/* Input de Mensagem */}
+          {}
           {pedido.status !== 'COMPLETED' && !isCompleting && (
             <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
               <div className="flex items-center gap-4">
@@ -606,8 +590,8 @@ export default function PedidoDetalhePage() {
               </div>
             </form>
           )}
-          
-          {/* Mensagem de Chat Fechado */}
+
+          {}
           {(pedido.status === 'COMPLETED' || isCompleting) && (
             <div className="p-5 border-t border-surface-border bg-surface-dark/50">
               <div className="flex items-center justify-center gap-3 text-text-muted">
@@ -618,15 +602,15 @@ export default function PedidoDetalhePage() {
           )}
         </div>
 
-        {/* Coluna Lateral - Detalhes */}
+        {}
         <div className="space-y-5">
-          {/* Cliente */}
+          {}
           <div className="card-static p-6 space-y-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
               Dados do Cliente
             </h3>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-text-muted text-sm">Nome Completo</p>
@@ -645,13 +629,13 @@ export default function PedidoDetalhePage() {
             </div>
           </div>
 
-          {/* Veículo */}
+          {}
           <div className="card-static p-6 space-y-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <Car className="w-5 h-5 text-primary" />
               Veículo
             </h3>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-text-muted text-sm">Modelo</p>
@@ -668,13 +652,13 @@ export default function PedidoDetalhePage() {
             </div>
           </div>
 
-          {/* Pagamento */}
+          {}
           <div className="card-static p-6 space-y-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
               Pagamento
             </h3>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-text-muted text-sm">Forma de Pagamento</p>
@@ -695,7 +679,7 @@ export default function PedidoDetalhePage() {
                 </p>
               </div>
 
-              {/* Entrega agendada */}
+              {}
               {pedido.entrega?.data && (
                 <div className="pt-3 border-t border-surface-border space-y-1">
                   <p className="text-text-muted text-sm">Entrega Agendada</p>
@@ -712,16 +696,16 @@ export default function PedidoDetalhePage() {
             </div>
           </div>
 
-          {/* Ações */}
+          {}
           <div className="card-static p-6 space-y-3">
-            <button 
+            <button
               onClick={() => handleStatusChange('COMPLETED')}
               className="btn-primary w-full flex items-center justify-center gap-2"
             >
               <CheckCircle className="w-5 h-5" />
               Marcar como Finalizado
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => {
                 setScheduleError('')
@@ -742,7 +726,7 @@ export default function PedidoDetalhePage() {
         </div>
       </div>
 
-      {/* Modal de Agendamento de Entrega */}
+      {}
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="card-static w-full max-w-md p-6 space-y-4">

@@ -2,13 +2,13 @@ export default function NegociacaoLoading() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Skeleton */}
+        {}
         <div className="text-center mb-12">
           <div className="h-12 bg-surface-card rounded-lg w-80 mx-auto mb-4 animate-pulse" />
           <div className="h-6 bg-surface-card rounded-lg w-full max-w-2xl mx-auto animate-pulse" />
         </div>
 
-        {/* Cards Skeleton */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {[1, 2].map((i) => (
             <div key={i} className="card p-8">

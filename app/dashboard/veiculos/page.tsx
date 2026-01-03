@@ -49,50 +49,43 @@ export default function VeiculosPage() {
   const [imagePreview, setImagePreview] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Formatar valor para exibição (com pontos e vírgula)
   function formatCurrency(value: string | number): string {
     if (!value && value !== 0) return ''
-    
-    // Remove tudo que não é número
+
     const numbers = value.toString().replace(/\D/g, '')
-    
+
     if (!numbers) return ''
-    
-    // Converte para número (centavos) e formata
+
     const num = parseFloat(numbers) / 100
-    
-    // Formata com pontos para milhares e vírgula para decimais
+
     return num.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
   }
 
-  // Converter valor formatado para número (para enviar ao backend)
   function parseCurrency(value: string): number {
     if (!value) return 0
-    // Remove pontos e substitui vírgula por ponto
+
     const cleaned = value.replace(/\./g, '').replace(',', '.')
     const parsed = parseFloat(cleaned)
     return isNaN(parsed) ? 0 : parsed
   }
 
-  // Buscar veículos
   useEffect(() => {
     fetchCars()
   }, [])
 
   async function fetchCars() {
     try {
-      const response = await fetch('/api/cars?available=false') // Buscar todos, incluindo vendidos
-      
+      const response = await fetch('/api/cars?available=false')
+
       if (!response.ok) {
         throw new Error('Erro ao buscar veículos')
       }
-      
+
       const data = await response.json()
-      
-      // Garantir que sempre seja um array
+
       if (Array.isArray(data)) {
         setCars(data)
       } else {
@@ -102,14 +95,13 @@ export default function VeiculosPage() {
       }
     } catch (error) {
       console.error('Erro ao buscar veículos:', error)
-      setCars([]) // Garantir que seja um array vazio em caso de erro
+      setCars([])
       setErrorMessage('Erro ao carregar veículos. Verifique se o banco de dados está configurado.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Upload de imagem diretamente para Supabase Storage
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -119,13 +111,11 @@ export default function VeiculosPage() {
     setSuccessMessage('')
 
     try {
-      // Importar função de upload dinamicamente (client-side only)
+
       const { uploadImageToSupabase } = await import('@/lib/upload')
-      
-      // Fazer upload diretamente para Supabase Storage
+
       const imageUrl = await uploadImageToSupabase(file, 'cars')
-      
-      // Atualizar URL da imagem e preview
+
       setFormData((prev) => ({ ...prev, imageUrl }))
       setImagePreview(imageUrl)
       setSuccessMessage('Imagem enviada com sucesso!')
@@ -133,8 +123,7 @@ export default function VeiculosPage() {
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)
       const errorMessage = error.message || 'Erro ao fazer upload da imagem.'
-      
-      // Mensagem mais clara se Supabase não estiver configurado
+
       if (errorMessage.includes('Supabase não está configurado')) {
         setErrorMessage('Supabase não está configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente da Vercel.')
       } else {
@@ -145,7 +134,6 @@ export default function VeiculosPage() {
     }
   }
 
-  // Abrir modal para adicionar
   function handleAdd() {
     setEditingCar(null)
     setFormData({
@@ -169,7 +157,6 @@ export default function VeiculosPage() {
     setErrorMessage('')
   }
 
-  // Abrir modal para editar
   function handleEdit(car: Car) {
     setEditingCar(car)
     setFormData({
@@ -177,7 +164,7 @@ export default function VeiculosPage() {
       brand: car.brand,
       model: car.model,
       year: car.year,
-      price: formatCurrency(car.price), // Formatar para exibição
+      price: formatCurrency(car.price),
       category: car.category,
       imageUrl: car.imageUrl,
       mileage: car.mileage?.toString() || '',
@@ -193,7 +180,6 @@ export default function VeiculosPage() {
     setErrorMessage('')
   }
 
-  // Salvar veículo
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -202,9 +188,6 @@ export default function VeiculosPage() {
     setSuccessMessage('')
     setErrorMessage('')
 
-    // Validar imagem (única validação obrigatória aqui;
-    // os demais campos já têm "required" no HTML e o backend
-    // também valida)
     if (!formData.imageUrl || !formData.imageUrl.trim()) {
       setErrorMessage('Por favor, selecione ou informe uma imagem para o veículo.')
       setSubmitting(false)
@@ -215,13 +198,12 @@ export default function VeiculosPage() {
       const url = editingCar ? `/api/cars/${editingCar.id}` : '/api/cars'
       const method = editingCar ? 'PUT' : 'POST'
 
-      // Garantir que todos os valores estão corretos
       const payload = {
         name: String(formData.name || ''),
         brand: String(formData.brand || ''),
         model: String(formData.model || ''),
         year: formData.year ? Number(formData.year) : new Date().getFullYear(),
-        price: parseCurrency(formData.price || '0'), // Converter valor formatado para número
+        price: parseCurrency(formData.price || '0'),
         category: String(formData.category || 'SUV'),
         imageUrl: String(formData.imageUrl || ''),
         mileage: formData.mileage ? Number(formData.mileage) : null,
@@ -229,7 +211,7 @@ export default function VeiculosPage() {
         color: formData.color ? String(formData.color) : null,
         fuel: String(formData.fuel || 'FLEX'),
         transmission: String(formData.transmission || 'AUTOMATIC'),
-        available: formData.available !== false, // Garantir que seja boolean
+        available: formData.available !== false,
       }
 
       console.log('Enviando dados do veículo:', payload)
@@ -255,11 +237,9 @@ export default function VeiculosPage() {
 
       setSuccessMessage(editingCar ? 'Veículo atualizado com sucesso!' : 'Veículo adicionado com sucesso!')
       setShowModal(false)
-      
-      // Recarregar lista de veículos
+
       await fetchCars()
-      
-      // Se não estiver editando, limpar formulário
+
       if (!editingCar) {
         setFormData({
           name: '',
@@ -279,13 +259,11 @@ export default function VeiculosPage() {
         setImagePreview('')
       }
 
-      // Limpar mensagem após 3 segundos
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error: any) {
       console.error('Erro ao salvar veículo:', error)
       const errorMessage = error.message || 'Erro ao salvar veículo'
-      
-      // Mensagem mais específica para erro de banco de dados
+
       if (errorMessage.includes('DATABASE_URL') || errorMessage.includes('Banco de dados não configurado')) {
         setErrorMessage('⚠️ Banco de dados não configurado. Configure a variável DATABASE_URL no arquivo .env para salvar veículos.')
       } else {
@@ -296,7 +274,6 @@ export default function VeiculosPage() {
     }
   }
 
-  // Deletar veículo
   async function handleDelete(id: string) {
     if (!confirm('Tem certeza que deseja excluir este veículo?')) return
 
@@ -317,7 +294,6 @@ export default function VeiculosPage() {
     }
   }
 
-  // Formatar preço
   function formatPrice(price: number) {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -325,7 +301,6 @@ export default function VeiculosPage() {
     }).format(price)
   }
 
-  // Formatar data
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString('pt-BR')
   }
@@ -343,7 +318,7 @@ export default function VeiculosPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Gerenciar Veículos</h1>
@@ -355,7 +330,7 @@ export default function VeiculosPage() {
         </button>
       </div>
 
-      {/* Mensagens */}
+      {}
       {successMessage && (
         <div className="card-static p-4 bg-green-500/10 border-green-500/30 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-400" />
@@ -370,7 +345,7 @@ export default function VeiculosPage() {
         </div>
       )}
 
-      {/* Lista de Veículos */}
+      {}
       {cars.length === 0 ? (
         <div className="card-static text-center py-16">
           <Car className="w-16 h-16 text-text-muted mx-auto mb-4" />
@@ -466,7 +441,7 @@ export default function VeiculosPage() {
         </div>
       )}
 
-      {/* Modal de Adicionar/Editar */}
+      {}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-background-secondary rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -483,7 +458,7 @@ export default function VeiculosPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6" noValidate>
-              {/* Nome */}
+              {}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Nome do Veículo <span className="text-red-400">*</span>
@@ -498,7 +473,7 @@ export default function VeiculosPage() {
                 />
               </div>
 
-              {/* Marca e Modelo */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -528,7 +503,7 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Ano, Categoria e Valor */}
+              {}
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -572,12 +547,12 @@ export default function VeiculosPage() {
                     required
                     value={formData.price || ''}
                     onChange={(e) => {
-                      // Permite apenas números e formata automaticamente
+
                       const formatted = formatCurrency(e.target.value)
                       setFormData({ ...formData, price: formatted || '' })
                     }}
                     onBlur={(e) => {
-                      // Garante formatação completa ao sair do campo
+
                       if (e.target.value) {
                         const formatted = formatCurrency(e.target.value)
                         setFormData({ ...formData, price: formatted || '' })
@@ -589,7 +564,7 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Quilometragem e URL da Imagem */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -619,13 +594,13 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Upload de Imagem */}
+              {}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Imagem do Veículo <span className="text-red-400">*</span>
                 </label>
-                
-                {/* Preview da imagem */}
+
+                {}
                 {(imagePreview || formData.imageUrl) && (
                   <div className="mb-4">
                     <img
@@ -640,7 +615,7 @@ export default function VeiculosPage() {
                   </div>
                 )}
 
-                {/* Input de arquivo */}
+                {}
                 <div className="relative">
                   <input
                     ref={fileInputRef}
@@ -683,7 +658,7 @@ export default function VeiculosPage() {
                   </label>
                 </div>
 
-                {/* URL alternativa (opcional) */}
+                {}
                 <div className="mt-3">
                   <details className="text-sm">
                     <summary className="text-text-muted cursor-pointer hover:text-white transition-colors">
@@ -697,7 +672,7 @@ export default function VeiculosPage() {
                           setFormData({ ...formData, imageUrl: e.target.value || '' })
                           setImagePreview(e.target.value || '')
                         }}
-                        placeholder="https://exemplo.com/imagem.jpg"
+                        placeholder="https:
                         className="input-field w-full"
                       />
                       <p className="text-xs text-text-muted">
@@ -708,7 +683,7 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Combustível e Transmissão */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -741,7 +716,7 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Descrição e Cor */}
+              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -769,7 +744,7 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {/* Botões */}
+              {}
               <div className="flex items-center justify-end gap-4 pt-4 border-t border-surface-border">
                 <button
                   type="button"

@@ -1,17 +1,11 @@
-// Funções utilitárias
+
 
 import { clsx, type ClassValue } from 'clsx'
 
-/**
- * Combina classes CSS com suporte a condicionais
- */
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
-/**
- * Formata preço em Real brasileiro
- */
 export function formatPrice(price: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -21,9 +15,6 @@ export function formatPrice(price: number): string {
   }).format(price)
 }
 
-/**
- * Formata data completa
- */
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -32,9 +23,6 @@ export function formatDate(date: string | Date): string {
   })
 }
 
-/**
- * Formata data e hora
- */
 export function formatDateTime(date: string | Date): string {
   return new Date(date).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -45,9 +33,6 @@ export function formatDateTime(date: string | Date): string {
   })
 }
 
-/**
- * Formata apenas hora
- */
 export function formatTime(date: string | Date): string {
   return new Date(date).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
@@ -55,46 +40,28 @@ export function formatTime(date: string | Date): string {
   })
 }
 
-/**
- * Formata número de quilometragem
- */
 export function formatMileage(km: number): string {
   return `${km.toLocaleString('pt-BR')} km`
 }
 
-/**
- * Trunca texto com reticências
- */
 export function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str
   return str.slice(0, maxLength) + '...'
 }
 
-/**
- * Gera ID único simples
- */
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 15)
 }
 
-/**
- * Delay/sleep assíncrono
- */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/**
- * Valida telefone brasileiro
- */
 export function isValidPhone(phone: string): boolean {
   const cleaned = phone.replace(/\D/g, '')
   return cleaned.length === 10 || cleaned.length === 11
 }
 
-/**
- * Formata telefone brasileiro
- */
 export function formatPhone(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')
   if (cleaned.length === 11) {
@@ -105,8 +72,6 @@ export function formatPhone(phone: string): string {
   }
   return phone
 }
-
-// Mapeamentos de labels
 
 export const categoryLabels: Record<string, string> = {
   SUV: 'SUV',
@@ -153,9 +118,6 @@ export const negotiationStatusLabels: Record<string, string> = {
   CLOSED: 'Fechada',
 }
 
-/**
- * Verifica se um erro é um erro de conexão do Prisma
- */
 export function isPrismaConnectionError(error: any): boolean {
   return (
     error.code === 'P1001' ||
@@ -172,9 +134,6 @@ export function isPrismaConnectionError(error: any): boolean {
   )
 }
 
-/**
- * Verifica se um erro é um erro de prepared statement duplicado
- */
 export function isPreparedStatementError(error: any): boolean {
   return (
     error.message?.includes('prepared statement') ||

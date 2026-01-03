@@ -12,21 +12,21 @@ export default function Loading() {
 export function CarCardSkeleton() {
   return (
     <div className="card-static overflow-hidden animate-pulse">
-      {/* Imagem Skeleton */}
+      {}
       <div className="h-56 bg-surface-hover" />
-      
-      {/* Conteúdo Skeleton */}
+
+      {}
       <div className="p-6 space-y-4">
         <div>
           <div className="h-3 bg-surface-hover rounded w-20 mb-2" />
           <div className="h-6 bg-surface-hover rounded w-3/4" />
         </div>
-        
+
         <div className="flex gap-4">
           <div className="h-4 bg-surface-hover rounded w-16" />
           <div className="h-4 bg-surface-hover rounded w-16" />
         </div>
-        
+
         <div className="flex items-center justify-between pt-4 border-t border-surface-border">
           <div>
             <div className="h-3 bg-surface-hover rounded w-16 mb-1" />

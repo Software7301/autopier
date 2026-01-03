@@ -1,6 +1,3 @@
-// Seed do banco de dados - AutoPier
-// Catálogo COMPLETO com 23 veículos
-// Apenas 3 marcados como DESTAQUE
 import { PrismaClient, CarCategory, FuelType, TransmissionType, UserRole } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -8,7 +5,6 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados AutoPier...')
 
-  // Criar usuário admin (dono da concessionária)
   const dealer = await prisma.user.upsert({
     where: { email: 'admin@autopier.com' },
     update: {},
@@ -20,7 +16,6 @@ async function main() {
     },
   })
 
-  // Criar usuário cliente de exemplo
   const customer = await prisma.user.upsert({
     where: { email: 'cliente@email.com' },
     update: {},
@@ -34,12 +29,8 @@ async function main() {
 
   console.log('✅ Usuários criados:', { dealer: dealer.id, customer: customer.id })
 
-  // Limpar veículos existentes
   await prisma.car.deleteMany()
 
-  // ========================================
-  // 🚙 VEÍCULOS SUV (6 veículos)
-  // ========================================
   const suvCars = [
     {
       name: 'Volkswagen T-Cross',
@@ -139,10 +130,6 @@ async function main() {
     },
   ]
 
-  // ========================================
-  // 🏎️ VEÍCULOS ESPORTIVOS (7 veículos)
-  // ⭐ 3 COM DESTAQUE
-  // ========================================
   const esportivoCars = [
     {
       name: 'BMW X5 M Sport',
@@ -258,9 +245,6 @@ async function main() {
     },
   ]
 
-  // ========================================
-  // 🚘 VEÍCULOS SEDÃ (5 veículos)
-  // ========================================
   const sedanCars = [
     {
       name: 'Chevrolet Onix Plus',
@@ -344,9 +328,6 @@ async function main() {
     },
   ]
 
-  // ========================================
-  // 🚗 VEÍCULOS COMPACTOS (5 veículos)
-  // ========================================
   const compactoCars = [
     {
       name: 'Chevrolet Onix',

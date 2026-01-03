@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  MessageSquare, 
-  Settings, 
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  MessageSquare,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -17,7 +17,6 @@ import {
   BarChart3
 } from 'lucide-react'
 
-// Links do menu
 const menuItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/dashboard/veiculos', label: 'Veículos', icon: Car },
@@ -38,7 +37,6 @@ export default function DashboardLayout({
   const [employeeRole, setEmployeeRole] = useState('')
   const [employeeAvatar, setEmployeeAvatar] = useState<string | null>(null)
 
-  // Carregar nome do funcionário do localStorage
   useEffect(() => {
     const loadEmployeeName = () => {
       const savedEmployee = localStorage.getItem('autopier_employee')
@@ -62,7 +60,6 @@ export default function DashboardLayout({
 
     loadEmployeeName()
 
-    // Ouvir evento de atualização
     const handleEmployeeUpdate = (event: CustomEvent) => {
       const { firstName, lastName, role, avatarUrl } = event.detail
       if (firstName && lastName) {
@@ -82,22 +79,21 @@ export default function DashboardLayout({
     }
   }, [])
 
-  // Se estiver na página de login, não mostrar sidebar
   if (pathname === '/dashboard/login') {
     return <>{children}</>
   }
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Overlay mobile */}
+      {}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
         w-72 bg-background-secondary border-r border-surface-border
@@ -105,7 +101,7 @@ export default function DashboardLayout({
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {}
           <div className="p-6 border-b border-surface-border">
             <Link href="/dashboard" className="flex items-center gap-3 group">
               <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-md shadow-primary/20 group-hover:border-primary/50 transition-all duration-300 flex-shrink-0">
@@ -127,7 +123,7 @@ export default function DashboardLayout({
             </Link>
           </div>
 
-          {/* Menu */}
+          {}
           <nav className="flex-1 p-4 space-y-2">
             {menuItems.map((item) => {
               const isActive = pathname === item.href
@@ -137,8 +133,8 @@ export default function DashboardLayout({
                   href={item.href}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                    ${isActive 
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25' 
+                    ${isActive
+                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
                       : 'text-text-secondary hover:bg-surface hover:text-white'
                     }
                   `}
@@ -150,7 +146,7 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          {/* Usuário logado */}
+          {}
           <div className="p-4 border-t border-surface-border">
             <div className="flex items-center gap-3 px-4 py-3">
               {employeeAvatar ? (
@@ -187,9 +183,9 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Conteúdo Principal */}
+      {}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header Mobile */}
+        {}
         <header className="lg:hidden sticky top-0 z-30 bg-background-secondary border-b border-surface-border px-4 py-3">
           <div className="flex items-center justify-between">
             <button
@@ -217,7 +213,7 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* Conteúdo */}
+        {}
         <main className="flex-1 p-6 lg:p-8 overflow-auto">
           {children}
         </main>

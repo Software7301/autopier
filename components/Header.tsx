@@ -10,8 +10,7 @@ import { ActiveChatIndicator } from './ActiveChatBanner'
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pathname = usePathname()
-  
-  // Dashboard usa outro layout próprio -> não mostrar header público lá
+
   const isDashboard = pathname?.startsWith('/dashboard')
 
   if (isDashboard) {
@@ -30,7 +29,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          {/* Logo */}
+          {}
           <Link href="/" className="flex items-center gap-3 group">
             <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/20 group-hover:scale-105 group-hover:border-primary/50 transition-all duration-300">
               <Image
@@ -49,7 +48,7 @@ export default function Header() {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
+          {}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link
@@ -62,7 +61,7 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            {/* Indicador de Chat Ativo - Não mostrar no dashboard */}
+            {}
             {!isDashboard && <ActiveChatIndicator />}
             <Link
               href="/cliente"
@@ -82,7 +81,7 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* Mobile Menu Button */}
+          {}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="md:hidden p-2 text-white hover:bg-surface-hover rounded-lg transition-colors"
@@ -92,7 +91,7 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
+        {}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-surface-border animate-fade-in">
             <nav className="flex flex-col gap-2">

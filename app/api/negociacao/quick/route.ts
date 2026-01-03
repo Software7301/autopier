@@ -6,7 +6,6 @@ import { getOrCreateBuyer, getOrCreateSeller } from '@/lib/users'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Informação sobre a rota
 export async function GET(request: NextRequest) {
   return NextResponse.json({
     message: 'Endpoint para criar negociação rápida',
@@ -21,7 +20,6 @@ export async function GET(request: NextRequest) {
   })
 }
 
-// POST - Criar ou reutilizar negociação rapidamente (apenas carId e telefone)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -36,7 +34,6 @@ export async function POST(request: NextRequest) {
 
     const normalizedPhone = customerPhone.replace(/\D/g, '')
 
-    // Verificar se o carro existe
     const car = await prisma.car.findUnique({
       where: { id: carId },
     })
@@ -48,11 +45,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Obter ou criar buyer e seller
     const buyerId = await getOrCreateBuyer(normalizedPhone, customerName || 'Cliente')
     const sellerId = await getOrCreateSeller()
 
-    // Verificar se já existe negociação ativa para este carro e telefone
     const existingNegotiation = await prisma.negotiation.findFirst({
       where: {
         carId,
@@ -64,16 +59,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingNegotiation) {
-      // Reutilizar negociação existente
+
       return NextResponse.json({
         negotiationId: existingNegotiation.id,
-        chatId: existingNegotiation.id, // O chatId é o negotiationId
+        chatId: existingNegotiation.id,
         isNew: false,
         message: 'Negociação existente encontrada',
       })
     }
 
-    // Criar nova negociação
     const negotiation = await prisma.negotiation.create({
       data: {
         type: NegotiationType.BUY,
@@ -84,7 +78,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Criar mensagem inicial
     const initialMessage = `Olá! Tenho interesse em negociar o veículo ${car.name}.`
     await prisma.message.create({
       data: {
@@ -113,5 +106,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
 

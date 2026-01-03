@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Informação sobre a rota
 export async function GET(req: Request) {
   return NextResponse.json({
     message: 'Endpoint de checkout - criar pedido',
@@ -133,8 +132,7 @@ export async function POST(req: Request) {
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
-    
-    // Erros de conexão do Prisma
+
     if (
       error.code === 'P1001' ||
       error.code === 'P1000' ||
@@ -148,14 +146,13 @@ export async function POST(req: Request) {
       error.message?.includes('timeout')
     ) {
       return NextResponse.json(
-        { 
+        {
           error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
         },
         { status: 503 }
       )
     }
 
-    // Erros de validação do Prisma
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'Dados duplicados. Verifique os dados informados.' },
@@ -169,11 +166,11 @@ export async function POST(req: Request) {
         { status: 404 }
       )
     }
-    
+
     const errorMessage = error.message || 'Erro interno no checkout'
-    
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },

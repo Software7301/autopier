@@ -13,8 +13,8 @@ export async function GET(
   try {
     const { id } = await params
     const searchParams = request.nextUrl.searchParams
-    const customerName = searchParams.get('customerName') // Nome do cliente para validação
-    
+    const customerName = searchParams.get('customerName')
+
     const negotiation = await prisma.negotiation.findUnique({
       where: { id },
       include: {
@@ -37,11 +37,10 @@ export async function GET(
       )
     }
 
-    // Validação de acesso: cliente só pode acessar suas próprias negociações pelo nome
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
-      
+
       if (normalizedCustomerName !== normalizedBuyerName) {
         return NextResponse.json(
           { error: 'Acesso negado. Esta negociação não pertence a você.' },
@@ -95,7 +94,6 @@ export async function GET(
   }
 }
 
-// PATCH - Atualizar status da negociação
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -179,10 +177,9 @@ export async function POST(
       )
     }
 
-    // Validar que o nome corresponde ao buyer da negociação
     const normalizedCustomerName = customerName.trim().toLowerCase()
     const normalizedBuyerName = negotiation.buyer.name?.trim().toLowerCase() || ''
-    
+
     if (normalizedCustomerName !== normalizedBuyerName) {
       return NextResponse.json(
         { error: 'Acesso negado. Esta negociação não pertence a você.' },
@@ -190,10 +187,8 @@ export async function POST(
       )
     }
 
-    // Usar o buyerId da negociação
     const senderId = negotiation.buyerId
 
-    // Criar mensagem do cliente
     const message = await prisma.message.create({
       data: {
         negotiationId: id,
@@ -205,7 +200,6 @@ export async function POST(
       },
     })
 
-    // Atualizar status da negociação para IN_PROGRESS se estiver OPEN
     if (negotiation.status === NegotiationStatus.OPEN) {
       await prisma.negotiation.update({
         where: { id },

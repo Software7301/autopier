@@ -8,10 +8,10 @@ interface TypingIndicatorProps {
   variant?: 'chat' | 'inline'
 }
 
-export default function TypingIndicator({ 
-  isTyping, 
-  userName = 'Alguém', 
-  variant = 'chat' 
+export default function TypingIndicator({
+  isTyping,
+  userName = 'Alguém',
+  variant = 'chat'
 }: TypingIndicatorProps) {
   if (variant === 'inline') {
     return (
@@ -42,14 +42,14 @@ export default function TypingIndicator({
           className="flex items-center gap-2 px-4 py-2"
         >
           <div className="flex items-center gap-3 bg-surface-dark/50 rounded-2xl px-4 py-2.5 border border-surface-border/50">
-            {/* Avatar */}
+            {}
             <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
               <span className="text-xs text-primary font-medium">
                 {userName.charAt(0).toUpperCase()}
               </span>
             </div>
-            
-            {/* Texto + Animação */}
+
+            {}
             <div className="flex items-center gap-1.5">
               <span className="text-text-muted text-sm">
                 {userName} está digitando
@@ -63,7 +63,6 @@ export default function TypingIndicator({
   )
 }
 
-// Componente de pontinhos animados
 function TypingDots() {
   return (
     <span className="inline-flex items-center gap-0.5 ml-0.5">
@@ -87,7 +86,6 @@ function TypingDots() {
   )
 }
 
-// Componente de Toast de notificação
 interface NotificationToastProps {
   show: boolean
   title: string
@@ -96,12 +94,12 @@ interface NotificationToastProps {
   onClick?: () => void
 }
 
-export function NotificationToast({ 
-  show, 
-  title, 
-  message, 
-  onClose, 
-  onClick 
+export function NotificationToast({
+  show,
+  title,
+  message,
+  onClose,
+  onClick
 }: NotificationToastProps) {
   return (
     <AnimatePresence>
@@ -113,28 +111,28 @@ export function NotificationToast({
           transition={{ duration: 0.3, ease: 'easeOut' }}
           className="fixed top-24 right-4 z-[100] max-w-sm"
         >
-          <div 
+          <div
             onClick={onClick}
             className={`bg-surface border border-surface-border rounded-xl shadow-2xl shadow-black/30 overflow-hidden ${onClick ? 'cursor-pointer hover:bg-surface-hover transition-colors' : ''}`}
           >
-            {/* Header com gradiente */}
+            {}
             <div className="h-1 bg-gradient-to-r from-primary to-accent" />
-            
+
             <div className="p-4">
               <div className="flex items-start gap-3">
-                {/* Ícone de notificação */}
+                {}
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-sm">{title}</p>
                   <p className="text-text-secondary text-sm mt-0.5 line-clamp-2">{message}</p>
                 </div>
 
-                {/* Botão fechar */}
+                {}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()

@@ -7,14 +7,13 @@ import { isPrismaConnectionError } from '@/lib/utils'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// POST - Criar nova negociação
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const { 
-      type, 
-      customerName, 
+    const {
+      type,
+      customerName,
       customerPhone,
       customerEmail,
       vehicleName,
@@ -29,7 +28,6 @@ export async function POST(request: NextRequest) {
       carId
     } = body
 
-    // Validação básica
     if (!customerName || !customerPhone) {
       return NextResponse.json(
         { error: 'Nome e telefone são obrigatórios' },
@@ -37,16 +35,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar tipo
-    const negotiationType = (type === 'VENDA' || type === 'SELL') 
-      ? NegotiationType.SELL 
+    const negotiationType = (type === 'VENDA' || type === 'SELL')
+      ? NegotiationType.SELL
       : NegotiationType.BUY
 
-    // Obter ou criar buyer e seller
     const buyerId = await getOrCreateBuyer(customerPhone, customerName, customerEmail)
     const sellerId = await getOrCreateSeller()
 
-    // Verificar se carId existe (se fornecido)
     if (carId) {
       const car = await prisma.car.findUnique({ where: { id: carId } })
       if (!car) {
@@ -57,7 +52,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Criar negociação
     const negotiation = await prisma.negotiation.create({
       data: {
         type: negotiationType,
@@ -75,7 +69,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Criar mensagem inicial
     const initialMessage = negotiationType === NegotiationType.SELL
       ? `Olá! Gostaria de vender meu veículo: ${vehicleBrand} ${vehicleName} ${vehicleYear}. Quilometragem: ${vehicleMileage} km. Valor pretendido: R$ ${proposedPrice?.toLocaleString('pt-BR') || 'A combinar'}. ${vehicleDescription || ''}`
       : message || `Olá! Tenho interesse em negociar. ${vehicleInterest || ''}`
@@ -107,10 +100,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET - Listar negociações
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/negociacao] Iniciando busca de negociações...')
-  
+
   try {
     const negotiations = await prisma.negotiation.findMany({
       include: {
@@ -122,9 +114,9 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc',
       },
     })
-    
+
     console.log(`✅ [GET /api/negociacao] Encontradas ${negotiations.length} negociações`)
-    
+
     const formattedNegotiations = negotiations.map(neg => ({
       id: neg.id,
       type: neg.type,
@@ -156,7 +148,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
 
-    // SEMPRE retornar array vazio em caso de erro (não objeto de erro)
     console.warn('⚠️ [GET /api/negociacao] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }

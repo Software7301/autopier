@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/client/negotiations] Iniciando busca de negociações do cliente...')
-  
+
   try {
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     const normalizedName = customerName.trim()
-    
+
     const user = await prisma.user.findFirst({
       where: {
         name: {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ [GET /api/client/negotiations] Usuário não encontrado. Retornando array vazio.')
       return NextResponse.json([])
     }
-    
+
     const negotiations = await prisma.negotiation.findMany({
       where: {
         buyerId: user.id,
@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
         updatedAt: 'desc',
       },
     })
-    
+
     console.log(`✅ [GET /api/client/negotiations] Encontradas ${negotiations.length} negociações`)
-    
+
     const clientNegotiations = negotiations.map(neg => {
       const lastMessage = neg.messages[0]
-      
+
       return {
         id: neg.id,
         carId: neg.carId || '',
@@ -92,5 +92,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([], { status: 200 })
   }
 }
-
 

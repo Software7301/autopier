@@ -6,13 +6,9 @@ import { isPrismaConnectionError } from '@/lib/utils'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET - Buscar chats ativos (negociações ativas)
-// Query params:
-// - phone: telefone do cliente (retorna chats do cliente)
-// - all: true (retorna todos os chats ativos - para dashboard)
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/chats/active] Iniciando busca de chats ativos...')
-  
+
   try {
     const phone = request.nextUrl.searchParams.get('phone')
     const all = request.nextUrl.searchParams.get('all')
@@ -23,7 +19,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (all === 'true') {
-      // Dashboard - retornar todos os chats ativos (negociações)
+
       const negotiations = await prisma.negotiation.findMany({
         where: {
           status: {
@@ -60,9 +56,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (phone) {
-      // Cliente - retornar chats do cliente específico
+
       const normalizedPhone = phone.replace(/\D/g, '')
-      
+
       const user = await prisma.user.findFirst({
         where: { phone: normalizedPhone },
       })
@@ -107,7 +103,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ chats })
     }
 
-    // Sem filtro - retornar lista vazia
     console.warn('⚠️ [GET /api/chats/active] Sem filtros. Retornando array vazio.')
     return NextResponse.json({ chats: [] })
   } catch (error: any) {
@@ -122,20 +117,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ chats: [] }, { status: 200 })
     }
 
-    // SEMPRE retornar { chats: [] } em caso de erro (não objeto de erro)
     console.warn('⚠️ [GET /api/chats/active] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json({ chats: [] }, { status: 200 })
   }
 }
 
-// POST - Verificar se existe chat ativo para um telefone
-// Usado para reconexão automática
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { phone, negotiationId } = body
 
-    // Verificar por referência específica
     if (negotiationId) {
       const negotiation = await prisma.negotiation.findUnique({
         where: { id: negotiationId },
@@ -177,10 +168,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verificar por telefone
     if (phone) {
       const normalizedPhone = phone.replace(/\D/g, '')
-      
+
       const user = await prisma.user.findFirst({
         where: { phone: normalizedPhone },
       })
@@ -209,7 +199,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (negotiations.length > 0) {
-        // Retornar o chat mais recente
+
         const mostRecent = negotiations[0]
 
         return NextResponse.json({

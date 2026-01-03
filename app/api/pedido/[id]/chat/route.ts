@@ -15,13 +15,12 @@ export async function GET(
     orderId = id
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
-    
+
     console.log('📋 [GET /api/pedido/[id]/chat] Buscando mensagens do pedido:', {
       orderId: id,
       hasCustomerName: !!customerName,
     })
-    
-    // Buscar pedido e mensagens em uma única query para evitar problemas com prepared statements
+
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
@@ -40,11 +39,10 @@ export async function GET(
       }, { status: 200 })
     }
 
-    // Validar acesso se customerName for fornecido
     if (customerName) {
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
-      
+
       if (normalizedCustomerName !== normalizedOrderName) {
         console.warn('⚠️ [GET /api/pedido/[id]/chat] Acesso negado:', {
           provided: normalizedCustomerName,
@@ -57,7 +55,6 @@ export async function GET(
       }
     }
 
-    // Formatar mensagens (pode estar vazio se a tabela não existir ou não houver mensagens)
     const formattedMessages = (order.messages || []).map(msg => ({
       id: msg.id,
       content: msg.content,
@@ -79,8 +76,7 @@ export async function GET(
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
-    
-    // Erro específico de prepared statement
+
     if (isPreparedStatementError(error)) {
       console.error('❌ [GET /api/pedido/[id]/chat] Erro de prepared statement')
       return NextResponse.json({
@@ -89,8 +85,7 @@ export async function GET(
         messages: [],
       }, { status: 200 })
     }
-    
-    // Erro de tabela não encontrada
+
     if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('order_messages')) {
       console.error('❌ [GET /api/pedido/[id]/chat] Tabela order_messages não existe')
       return NextResponse.json({
@@ -99,13 +94,11 @@ export async function GET(
         messages: [],
       }, { status: 200 })
     }
-    
-    // Erros de conexão
+
     if (isPrismaConnectionError(error)) {
       console.warn('⚠️ [GET /api/pedido/[id]/chat] Erro de conexão. Retornando array vazio.')
     }
-    
-    // Sempre retornar 200 com estrutura válida para não quebrar o frontend
+
     return NextResponse.json({
       orderId: orderId || '',
       customerName: '',
@@ -142,7 +135,6 @@ export async function POST(
       )
     }
 
-    // Verificar se o pedido existe e está acessível
     const order = await prisma.order.findUnique({
       where: { id },
       select: {
@@ -166,11 +158,10 @@ export async function POST(
       status: order.status,
     })
 
-    // Validar sender
     const validSender = sender === 'funcionario' || sender === 'cliente' ? sender : 'cliente'
-    
+
     if (validSender === 'funcionario') {
-      // Mensagem de funcionário - garantir que senderName existe
+
       if (!senderName || !senderName.trim()) {
         console.error('❌ [Chat POST] senderName obrigatório para funcionário')
         return NextResponse.json(
@@ -180,7 +171,7 @@ export async function POST(
       }
       console.log('✅ [Chat POST] Mensagem de funcionário:', senderName)
     } else {
-      // Mensagem de cliente - validar nome
+
       if (!customerName || !customerName.trim()) {
         console.error('❌ [Chat POST] Nome do cliente não fornecido')
         return NextResponse.json(
@@ -191,7 +182,7 @@ export async function POST(
 
       const normalizedCustomerName = customerName.trim().toLowerCase()
       const normalizedOrderName = order.customerName?.trim().toLowerCase() || ''
-      
+
       if (normalizedCustomerName !== normalizedOrderName) {
         console.error('❌ [Chat POST] Acesso negado:', {
           provided: normalizedCustomerName,
@@ -204,8 +195,7 @@ export async function POST(
       }
     }
 
-    // Garantir que senderName está definido
-    const finalSenderName = validSender === 'funcionario' 
+    const finalSenderName = validSender === 'funcionario'
       ? (senderName?.trim() || 'AutoPier')
       : (customerName?.trim() || order.customerName || 'Cliente')
 
@@ -234,7 +224,7 @@ export async function POST(
         message: createError.message,
         meta: createError.meta,
       })
-      throw createError // Re-throw para ser capturado pelo catch externo
+      throw createError
     }
 
     return NextResponse.json({
@@ -250,12 +240,11 @@ export async function POST(
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
     console.error('Order ID:', orderId)
-    
-    // Erro de tabela não encontrada
+
     if (error.code === 'P2021' || error.message?.includes('does not exist') || error.message?.includes('order_messages')) {
       console.error('❌ [Chat POST] Tabela order_messages não existe')
       return NextResponse.json(
-        { 
+        {
           error: 'Sistema em manutenção. A tabela de mensagens não foi criada. Tente novamente em alguns instantes.',
           code: 'TABLE_NOT_FOUND'
         },
@@ -263,11 +252,10 @@ export async function POST(
       )
     }
 
-    // Erros de conexão do Prisma
     if (isPrismaConnectionError(error)) {
       console.error('❌ [Chat POST] Erro de conexão com banco de dados')
       return NextResponse.json(
-        { 
+        {
           error: 'Erro de conexão com o banco de dados. Tente novamente em alguns instantes.',
           code: 'DATABASE_CONNECTION_ERROR'
         },
@@ -275,7 +263,6 @@ export async function POST(
       )
     }
 
-    // Erros de validação do Prisma
     if (error.code === 'P2002') {
       console.error('❌ [Chat POST] Dados duplicados')
       return NextResponse.json(
@@ -292,7 +279,6 @@ export async function POST(
       )
     }
 
-    // Log detalhado do erro
     console.error('❌ [Chat POST] Erro desconhecido:', {
       code: error.code,
       name: error.name,
@@ -304,11 +290,11 @@ export async function POST(
     })
 
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao enviar mensagem',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         code: error.code || 'UNKNOWN_ERROR',
-        hint: error.message?.includes('order_messages') 
+        hint: error.message?.includes('order_messages')
           ? 'A tabela order_messages pode não existir. Execute: npx prisma db push'
           : undefined
       },

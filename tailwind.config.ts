@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Tema dark moderno com azul elegante
+
         background: {
           DEFAULT: '#0f0f0f',
           secondary: '#1a1a1a',

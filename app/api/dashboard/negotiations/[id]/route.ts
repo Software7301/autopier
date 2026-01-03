@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NegotiationStatus } from '@prisma/client'
 
-// 🔴 OBRIGATÓRIO PARA PRISMA FUNCIONAR NA VERCEL
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -83,7 +82,6 @@ export async function GET(
   }
 }
 
-// PATCH - Atualizar status da negociação
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

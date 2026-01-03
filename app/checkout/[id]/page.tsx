@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { 
-  ArrowLeft, 
-  CreditCard, 
-  Wallet, 
-  Banknote, 
+import {
+  ArrowLeft,
+  CreditCard,
+  Wallet,
+  Banknote,
   CheckCircle,
   Car,
   AlertCircle,
@@ -16,7 +16,6 @@ import {
 } from 'lucide-react'
 import { setUserName } from '@/lib/userName'
 
-// Interface do carro (simplificada)
 interface CarData {
   id: string
   name: string
@@ -24,7 +23,6 @@ interface CarData {
   imageUrl: string
 }
 
-// Opções de cores disponíveis
 const colorOptions = [
   { name: 'Preto', hex: '#1a1a1a', border: '#333' },
   { name: 'Branco', hex: '#f5f5f5', border: '#ccc' },
@@ -34,17 +32,14 @@ const colorOptions = [
   { name: 'Vermelho', hex: '#dc2626', border: '#b91c1c' },
 ]
 
-// Opções de pagamento (SEM desconto, SEM financiamento)
 const paymentMethods = [
   { value: 'PIX', label: 'Pix', icon: Wallet, description: 'Pagamento instantâneo' },
   { value: 'DINHEIRO', label: 'Dinheiro', icon: Banknote, description: 'Pagamento em espécie' },
   { value: 'CARTAO_CREDITO', label: 'Cartão de Crédito', icon: CreditCard, description: 'Em até 12x' },
 ]
 
-// Opções de parcelamento
 const installmentOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-// Função para formatar preço
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -64,10 +59,8 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
 
-  // Estado do seletor de cores
   const [selectedColor, setSelectedColor] = useState<string>('Preto')
 
-  // Form state
   const [formData, setFormData] = useState({
     customerName: '',
     customerRg: '',
@@ -76,14 +69,12 @@ export default function CheckoutPage() {
     installments: 1,
   })
 
-  // Erros de validação
   const [errors, setErrors] = useState({
     customerName: '',
     customerRg: '',
     customerPhone: '',
   })
 
-  // Buscar dados do carro
   useEffect(() => {
     async function fetchCar() {
       try {
@@ -104,27 +95,23 @@ export default function CheckoutPage() {
     fetchCar()
   }, [carId])
 
-  // Validação de RG (exatamente 6 dígitos)
   function validateRg(rg: string): boolean {
     const rgNumbers = rg.replace(/\D/g, '')
     return /^\d{6}$/.test(rgNumbers)
   }
 
-  // Validação de telefone (mínimo 6 dígitos)
   function validatePhone(phone: string): boolean {
     const phoneNumbers = phone.replace(/\D/g, '')
     return phoneNumbers.length >= 6
   }
 
-  // Handler do formulário
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target
-    
-    // Para RG e telefone, aceitar apenas números
+
     if (name === 'customerRg') {
       const numbersOnly = value.replace(/\D/g, '').slice(0, 6)
       setFormData((prev) => ({ ...prev, [name]: numbersOnly }))
-      // Limpar erro ao digitar
+
       if (errors.customerRg) {
         setErrors((prev) => ({ ...prev, customerRg: '' }))
       }
@@ -134,7 +121,7 @@ export default function CheckoutPage() {
     if (name === 'customerPhone') {
       const numbersOnly = value.replace(/\D/g, '')
       setFormData((prev) => ({ ...prev, [name]: numbersOnly }))
-      // Limpar erro ao digitar
+
       if (errors.customerPhone) {
         setErrors((prev) => ({ ...prev, customerPhone: '' }))
       }
@@ -147,35 +134,29 @@ export default function CheckoutPage() {
     }
 
     setFormData((prev) => ({ ...prev, [name]: value }))
-    
-    // Limpar erro ao digitar
+
     if (name === 'customerName' && errors.customerName) {
       setErrors((prev) => ({ ...prev, customerName: '' }))
     }
   }
 
-  // Selecionar cor
   function handleColorSelect(colorName: string) {
     setSelectedColor(colorName)
   }
 
-  // Calcular valor da parcela
   function getInstallmentValue(): number {
     if (!car) return 0
     return car.price / formData.installments
   }
 
-  // Obter cor selecionada
   function getSelectedColorData() {
     return colorOptions.find(c => c.name === selectedColor) || colorOptions[0]
   }
 
-  // Submit do checkout
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!car) return
 
-    // Validações
     let hasError = false
     const newErrors = { customerName: '', customerRg: '', customerPhone: '' }
 
@@ -215,7 +196,7 @@ export default function CheckoutPage() {
           paymentMethod: formData.paymentMethod,
           installments: formData.paymentMethod === 'CARTAO_CREDITO' ? formData.installments : 1,
           totalPrice: car.price,
-          selectedColor: selectedColor, // Enviar cor selecionada
+          selectedColor: selectedColor,
         }),
       })
 
@@ -223,13 +204,13 @@ export default function CheckoutPage() {
 
       if (response.ok) {
         const customerName = formData.customerName.trim()
-        
+
         setUserName(customerName)
-        
+
         setOrderId(result.orderId)
         setSuccess(true)
       } else {
-        // Mostrar erro específico do backend
+
         if (result.errors) {
           const backendErrors = { customerName: '', customerRg: '', customerPhone: '' }
           if (result.errors.rg) backendErrors.customerRg = result.errors.rg
@@ -247,7 +228,6 @@ export default function CheckoutPage() {
     }
   }
 
-  // Tela de loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -259,7 +239,6 @@ export default function CheckoutPage() {
     )
   }
 
-  // Tela de sucesso
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center py-12">
@@ -288,7 +267,6 @@ export default function CheckoutPage() {
     )
   }
 
-  // Tela de checkout
   if (!car) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -308,7 +286,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <Link
             href="/cars"
@@ -323,12 +301,12 @@ export default function CheckoutPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Coluna do Formulário */}
+          {}
           <div className="lg:col-span-7 space-y-6">
             <form onSubmit={handleSubmit} className="card-static p-6 space-y-6">
               <h2 className="text-xl font-semibold text-white">Dados do Comprador</h2>
 
-              {/* Nome Completo */}
+              {}
               <div>
                 <label htmlFor="customerName" className="block text-sm font-medium text-text-secondary mb-2">
                   Nome Completo *
@@ -350,7 +328,7 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* RG */}
+              {}
               <div>
                 <label htmlFor="customerRg" className="block text-sm font-medium text-text-secondary mb-2">
                   RG (apenas números) *
@@ -376,7 +354,7 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {/* Telefone */}
+              {}
               <div>
                 <label htmlFor="customerPhone" className="block text-sm font-medium text-text-secondary mb-2">
                   Telefone (apenas números) *
@@ -401,7 +379,7 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {/* Forma de Pagamento */}
+              {}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-4">
                   Forma de Pagamento *
@@ -411,8 +389,8 @@ export default function CheckoutPage() {
                     <button
                       key={method.value}
                       type="button"
-                      onClick={() => setFormData((prev) => ({ 
-                        ...prev, 
+                      onClick={() => setFormData((prev) => ({
+                        ...prev,
                         paymentMethod: method.value,
                         installments: method.value === 'CARTAO_CREDITO' ? prev.installments : 1
                       }))}
@@ -432,7 +410,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Parcelamento (apenas para Cartão de Crédito) */}
+              {}
               {formData.paymentMethod === 'CARTAO_CREDITO' && (
                 <div>
                   <label htmlFor="installments" className="block text-sm font-medium text-text-secondary mb-2">
@@ -454,7 +432,7 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Botão Submit */}
+              {}
               <button
                 type="submit"
                 disabled={submitting}
@@ -475,9 +453,9 @@ export default function CheckoutPage() {
             </form>
           </div>
 
-          {/* Coluna do Resumo */}
+          {}
           <div className="lg:col-span-5 space-y-6">
-            {/* Imagem do Veículo */}
+            {}
             <div className="card-static overflow-hidden">
               <div className="relative h-64">
                 <Image
@@ -489,15 +467,15 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Seletor de Cores - Card separado */}
+            {}
             <div className="card-static p-5">
-              {/* Label com ícone de pincel */}
+              {}
               <div className="flex items-center gap-2 mb-5">
                 <Paintbrush className="w-5 h-5 text-primary" />
                 <span className="text-base font-medium text-white">Escolha a cor do veículo</span>
               </div>
 
-              {/* Grid de cores */}
+              {}
               <div className="grid grid-cols-3 gap-4">
                 {colorOptions.map((color) => (
                   <button
@@ -510,11 +488,11 @@ export default function CheckoutPage() {
                         : 'border-surface-border hover:border-primary/50 bg-surface'
                     }`}
                   >
-                    <div 
+                    <div
                       className={`w-14 h-14 rounded-full border-2 shadow-md transition-all duration-200 ${
                         selectedColor === color.name ? 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-surface-dark' : ''
                       }`}
-                      style={{ 
+                      style={{
                         backgroundColor: color.hex,
                         borderColor: color.border
                       }}
@@ -529,10 +507,10 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Resumo do Pedido */}
+            {}
             <div className="card-static p-6 space-y-5">
               <h3 className="text-xl font-semibold text-white">Resumo do Pedido</h3>
-              
+
               <div className="space-y-4 pb-5 border-b border-surface-border">
                 <div className="flex justify-between text-text-secondary text-base">
                   <span>Veículo</span>
@@ -541,9 +519,9 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-text-secondary text-base">
                   <span>Cor</span>
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className="w-5 h-5 rounded-full border-2"
-                      style={{ 
+                      style={{
                         backgroundColor: selectedColorData.hex,
                         borderColor: selectedColorData.border
                       }}
@@ -565,7 +543,7 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Valor Total */}
+              {}
               <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-medium text-white">Total</span>

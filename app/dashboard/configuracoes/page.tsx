@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings, Building, Mail, MapPin, Save, CheckCircle, User, Briefcase, ChevronDown, Upload, Image as ImageIcon, X } from 'lucide-react'
+import { Settings, Building, Mail, MapPin, Save, CheckCircle, User, Briefcase, ChevronDown, Upload, X } from 'lucide-react'
 import Image from 'next/image'
 import { uploadImageToSupabase } from '@/lib/upload'
 import { motion } from 'framer-motion'
@@ -15,7 +15,7 @@ export default function ConfiguracoesPage() {
     role: '',
     avatarUrl: '',
   })
-  
+
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -31,7 +31,6 @@ export default function ConfiguracoesPage() {
     { value: 'Outro', label: 'Outro' },
   ]
 
-  // Carregar dados do funcionário do localStorage ao montar
   useEffect(() => {
     const savedEmployee = localStorage.getItem('autopier_employee')
     if (savedEmployee) {
@@ -52,7 +51,6 @@ export default function ConfiguracoesPage() {
     }
   }, [])
 
-  // Handler para selecionar avatar
   function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -60,14 +58,14 @@ export default function ConfiguracoesPage() {
         alert('Por favor, selecione apenas arquivos de imagem')
         return
       }
-      
+
       if (file.size > 5 * 1024 * 1024) {
         alert('A imagem deve ter no máximo 5MB')
         return
       }
-      
+
       setAvatarFile(file)
-      
+
       const reader = new FileReader()
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string)
@@ -75,7 +73,7 @@ export default function ConfiguracoesPage() {
       reader.readAsDataURL(file)
     }
   }
-  
+
   function handleRemoveAvatar() {
     setAvatarFile(null)
     setAvatarPreview(null)
@@ -87,7 +85,7 @@ export default function ConfiguracoesPage() {
       alert('Por favor, preencha nome e sobrenome')
       return
     }
-    
+
     if (!employee.role) {
       alert('Por favor, selecione uma função')
       return
@@ -96,8 +94,7 @@ export default function ConfiguracoesPage() {
     setSaving(true)
     try {
       let avatarUrl = employee.avatarUrl
-      
-      // Se há uma imagem selecionada, fazer upload
+
       if (avatarFile) {
         setUploadingAvatar(true)
         try {
@@ -113,9 +110,9 @@ export default function ConfiguracoesPage() {
           setUploadingAvatar(false)
         }
       }
-      
+
       const employeeData = { ...employee, avatarUrl }
-      
+
       const response = await fetch('/api/dashboard/employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,12 +120,10 @@ export default function ConfiguracoesPage() {
       })
 
       if (response.ok) {
-        // Salvar no localStorage
         localStorage.setItem('autopier_employee', JSON.stringify(employeeData))
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
-        
-        // Disparar evento para atualizar o layout
+
         window.dispatchEvent(new CustomEvent('employeeUpdated', { detail: employeeData }))
       } else {
         alert('Erro ao salvar informações do funcionário')
@@ -143,7 +138,6 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-display font-bold text-white flex items-center gap-3">
           <Settings className="w-8 h-8 text-primary" />
@@ -154,7 +148,6 @@ export default function ConfiguracoesPage() {
         </p>
       </div>
 
-      {/* Informações da Empresa (Somente Leitura) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -166,7 +159,6 @@ export default function ConfiguracoesPage() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Nome da Empresa */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Nome da Empresa
@@ -174,7 +166,6 @@ export default function ConfiguracoesPage() {
             <p className="text-white">AutoPier</p>
           </div>
 
-          {/* Slogan */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Slogan
@@ -182,7 +173,6 @@ export default function ConfiguracoesPage() {
             <p className="text-white">Concessionária Premium</p>
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               <Mail className="w-4 h-4 inline mr-1" />
@@ -191,7 +181,6 @@ export default function ConfiguracoesPage() {
             <p className="text-white">autopiernovacapitalrp@gmail.com</p>
           </div>
 
-          {/* Endereço */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               <MapPin className="w-4 h-4 inline mr-1" />
@@ -202,7 +191,6 @@ export default function ConfiguracoesPage() {
         </div>
       </motion.div>
 
-      {/* Informações do Funcionário */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -215,7 +203,6 @@ export default function ConfiguracoesPage() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Nome */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Nome *
@@ -230,7 +217,6 @@ export default function ConfiguracoesPage() {
             />
           </div>
 
-          {/* Sobrenome */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Sobrenome *
@@ -245,7 +231,6 @@ export default function ConfiguracoesPage() {
             />
           </div>
 
-          {/* Função */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-text-secondary mb-2">
               <Briefcase className="w-4 h-4 inline mr-1" />
@@ -268,7 +253,6 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
 
-          {/* Avatar/Foto */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-text-secondary mb-2">
               <User className="w-4 h-4 inline mr-1" />
@@ -278,75 +262,68 @@ export default function ConfiguracoesPage() {
               <div className="relative">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/avif"
                   onChange={handleAvatarSelect}
                   className="hidden"
-                  id="employee-avatar-upload"
+                  id="avatar-upload"
                 />
                 <label
-                  htmlFor="employee-avatar-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-surface/50"
+                  htmlFor="avatar-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-border rounded-xl cursor-pointer hover:border-primary/50 hover:bg-surface/30 transition-all duration-200"
                 >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-text-muted" />
-                    <p className="mb-1 text-sm text-text-secondary">
-                      <span className="font-semibold">Clique para fazer upload</span> ou arraste a foto
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      PNG, JPG, WEBP até 5MB
-                    </p>
-                  </div>
+                  <Upload className="w-8 h-8 text-text-muted mb-2" />
+                  <span className="text-text-secondary text-sm font-medium">
+                    Clique para fazer upload
+                  </span>
+                  <span className="text-text-muted text-xs mt-1">
+                    JPG, PNG, WEBP, GIF ou AVIF (máx. 5MB)
+                  </span>
                 </label>
               </div>
             ) : (
-              <div className="relative w-32">
+              <div className="relative inline-block">
                 <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-primary/30">
                   <Image
                     src={avatarPreview}
-                    alt="Avatar do funcionário"
+                    alt="Preview do avatar"
                     fill
                     className="object-cover"
                   />
-                  <button
-                    type="button"
-                    onClick={handleRemoveAvatar}
-                    className="absolute top-1 right-1 p-1.5 bg-background-secondary/90 hover:bg-background-secondary rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
                 </div>
-                <p className="text-xs text-text-muted mt-2">
-                  Clique no X para remover a foto
-                </p>
+                <button
+                  type="button"
+                  onClick={handleRemoveAvatar}
+                  className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-lg"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Botão Salvar */}
-        <div className="mt-8 flex items-center gap-4">
-          <button
-            onClick={handleSaveEmployee}
-            disabled={saving || uploadingAvatar}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Save className="w-5 h-5" />
-            {uploadingAvatar ? 'Enviando foto...' : saving ? 'Salvando...' : 'Salvar Configurações'}
-          </button>
-
-          {saved && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-accent flex items-center gap-2"
+          <div className="mt-8 flex items-center gap-4 md:col-span-2">
+            <button
+              onClick={handleSaveEmployee}
+              disabled={saving || uploadingAvatar}
+              className="btn-primary flex items-center gap-2"
             >
-              <CheckCircle className="w-5 h-5" />
-              Configurações salvas!
-            </motion.span>
-          )}
+              <Save className="w-5 h-5" />
+              {uploadingAvatar ? 'Enviando foto...' : saving ? 'Salvando...' : 'Salvar Configurações'}
+            </button>
+
+            {saved && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-accent flex items-center gap-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                Configurações salvas!
+              </motion.span>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>
   )
 }
-

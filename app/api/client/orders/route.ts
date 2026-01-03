@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/client/orders] Iniciando busca de pedidos do cliente...')
-  
+
   try {
     const searchParams = request.nextUrl.searchParams
     const customerName = searchParams.get('customerName')
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     const normalizedName = customerName.trim()
-    
+
     const orders = await prisma.order.findMany({
       where: {
         customerName: {
@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
         updatedAt: 'desc',
       },
     })
-    
+
     console.log(`✅ [GET /api/client/orders] Encontrados ${orders.length} pedidos`)
-    
+
     const clientOrders = orders.map(order => ({
       id: order.id,
       carId: order.carId,
@@ -75,5 +75,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([], { status: 200 })
   }
 }
-
 

@@ -2,12 +2,12 @@
 
 import { useRef } from 'react'
 import Link from 'next/link'
-import { 
-  Car, 
-  MessageCircle, 
-  Shield, 
-  Award, 
-  TrendingUp, 
+import {
+  Car,
+  MessageCircle,
+  Shield,
+  Award,
+  TrendingUp,
   ArrowRight,
   Users,
   Star,
@@ -16,11 +16,10 @@ import {
 } from 'lucide-react'
 import { motion, useInView } from 'framer-motion'
 
-// Variantes de animação
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.6, ease: "easeOut" }
   }
@@ -39,26 +38,25 @@ const staggerContainer = {
 
 const scaleIn = {
   hidden: { opacity: 0, scale: 0.9 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     scale: 1,
     transition: { duration: 0.5, ease: "easeOut" }
   }
 }
 
-// Componente para seções com animação ao scroll
-function AnimatedSection({ 
-  children, 
+function AnimatedSection({
+  children,
   className = "",
-  delay = 0 
-}: { 
+  delay = 0
+}: {
   children: React.ReactNode
   className?: string
   delay?: number
 }) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
-  
+
   return (
     <motion.div
       ref={ref}
@@ -76,11 +74,10 @@ function AnimatedSection({
 export default function HomeContent() {
   const benefitsRef = useRef(null)
   const benefitsInView = useInView(benefitsRef, { once: true, margin: "-100px" })
-  
+
   const simulationsRef = useRef(null)
   const simulationsInView = useInView(simulationsRef, { once: true, margin: "-100px" })
-  
-  // Simulações de conversas (estilo WhatsApp)
+
   const conversationSimulations = [
     {
       id: 'sim-1',
@@ -154,48 +151,48 @@ export default function HomeContent() {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      {/* ===== HERO SECTION ===== */}
+      {}
       <section className="relative py-24 lg:py-36 overflow-hidden">
-        {/* Background animado */}
+        {}
         <div className="absolute inset-0 hero-pattern" />
-        
-        {/* Efeitos decorativos animados */}
-        <motion.div 
-          animate={{ 
+
+        {}
+        <motion.div
+          animate={{
             scale: [1, 1.2, 1],
             opacity: [0.1, 0.15, 0.1]
           }}
-          transition={{ 
-            duration: 8, 
+          transition={{
+            duration: 8,
             repeat: Infinity,
             ease: "easeInOut"
           }}
           className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl"
         />
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.3, 1],
             opacity: [0.1, 0.2, 0.1]
           }}
-          transition={{ 
-            duration: 10, 
+          transition={{
+            duration: 10,
             repeat: Infinity,
             ease: "easeInOut",
             delay: 1
           }}
           className="absolute bottom-10 right-10 w-96 h-96 bg-accent rounded-full blur-3xl"
         />
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-8">
-            {/* Badge animado */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="inline-flex items-center gap-2 bg-surface/50 backdrop-blur-md border border-surface-border px-5 py-2.5 rounded-full shadow-lg"
             >
-              <motion.span 
+              <motion.span
                 animate={{ scale: [1, 1.3, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
                 className="w-2 h-2 bg-accent rounded-full"
@@ -203,7 +200,7 @@ export default function HomeContent() {
               <span className="text-text-secondary text-sm font-medium">Concessionária Premium</span>
             </motion.div>
 
-            {/* Título Principal */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -212,13 +209,13 @@ export default function HomeContent() {
               <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold leading-tight">
                 <span className="text-white">Seu próximo</span>
                 <br />
-                <motion.span 
+                <motion.span
                   className="text-gradient inline-block"
-                  animate={{ 
+                  animate={{
                     backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
                   }}
-                  transition={{ 
-                    duration: 5, 
+                  transition={{
+                    duration: 5,
                     repeat: Infinity,
                     ease: "linear"
                   }}
@@ -231,18 +228,18 @@ export default function HomeContent() {
               </h1>
             </motion.div>
 
-            {/* Subtítulo */}
+            {}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto leading-relaxed"
             >
-              Encontre carros premium, seminovos e usados com as melhores condições. 
+              Encontre carros premium, seminovos e usados com as melhores condições.
               Negociação direta e transparente.
             </motion.p>
 
-            {/* CTAs */}
+            {}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -266,7 +263,7 @@ export default function HomeContent() {
               </Link>
             </motion.div>
 
-            {/* Stats */}
+            {}
             <motion.div
               initial="hidden"
               animate="visible"
@@ -291,15 +288,15 @@ export default function HomeContent() {
           </div>
         </div>
 
-        {/* Divisor decorativo */}
+        {}
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background-secondary to-transparent" />
       </section>
 
-      {/* ===== DIFERENCIAIS ===== */}
+      {}
       <section className="py-24 bg-background-secondary relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
-            <motion.span 
+            <motion.span
               className="inline-block text-primary text-sm font-semibold tracking-wider uppercase mb-4"
             >
               Nossos Diferenciais
@@ -312,7 +309,7 @@ export default function HomeContent() {
             </p>
           </AnimatedSection>
 
-          <motion.div 
+          <motion.div
             ref={benefitsRef}
             initial="hidden"
             animate={benefitsInView ? "visible" : "hidden"}
@@ -327,7 +324,7 @@ export default function HomeContent() {
                 transition={{ duration: 0.3 }}
                 className="card-static p-8 text-center group hover:border-primary/50 cursor-default"
               >
-                <motion.div 
+                <motion.div
                   whileHover={{ rotate: [0, -10, 10, 0] }}
                   transition={{ duration: 0.5 }}
                   className={`w-16 h-16 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-xl transition-shadow`}
@@ -344,14 +341,14 @@ export default function HomeContent() {
         </div>
       </section>
 
-      {/* ===== SIMULAÇÕES DE NEGOCIAÇÃO ===== */}
+      {}
       <section className="py-24 relative">
-        {/* Background decorativo */}
+        {}
         <div className="absolute inset-0 bg-gradient-to-b from-background-secondary via-background to-background" />
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-12">
-            <motion.span 
+            <motion.span
               className="inline-block text-accent text-sm font-semibold tracking-wider uppercase mb-3"
             >
               💬 Simulações de Negociação
@@ -364,7 +361,7 @@ export default function HomeContent() {
             </p>
           </AnimatedSection>
 
-          <motion.div 
+          <motion.div
             ref={simulationsRef}
             initial="hidden"
             animate={simulationsInView ? "visible" : "hidden"}
@@ -379,7 +376,7 @@ export default function HomeContent() {
                 transition={{ duration: 0.3 }}
                 className="card-static overflow-hidden hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10"
               >
-                {/* Header do chat */}
+                {}
                 <div className="bg-surface-dark/80 p-4 border-b border-surface-border">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -395,7 +392,7 @@ export default function HomeContent() {
                   </div>
                 </div>
 
-                {/* Área de mensagens estilo WhatsApp */}
+                {}
                 <div className="p-4 space-y-3 bg-surface-dark/40 min-h-[280px]">
                   {conversation.messages.map((message, msgIndex) => {
                     const isCliente = message.sender === 'cliente'
@@ -404,7 +401,7 @@ export default function HomeContent() {
                         key={msgIndex}
                         initial={{ opacity: 0, x: isCliente ? -20 : 20, y: 10 }}
                         animate={{ opacity: 1, x: 0, y: 0 }}
-                        transition={{ 
+                        transition={{
                           delay: index * 0.2 + msgIndex * 0.15,
                           duration: 0.4,
                           ease: "easeOut"
@@ -445,7 +442,7 @@ export default function HomeContent() {
             ))}
           </motion.div>
 
-          {/* Call to Action */}
+          {}
           <AnimatedSection className="text-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -465,11 +462,11 @@ export default function HomeContent() {
         </div>
       </section>
 
-      {/* ===== COMO FUNCIONA ===== */}
+      {}
       <section className="py-24 bg-background-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection className="text-center mb-16">
-            <motion.span 
+            <motion.span
               className="inline-block text-primary text-sm font-semibold tracking-wider uppercase mb-4"
             >
               Processo Simples
@@ -525,22 +522,22 @@ export default function HomeContent() {
         </div>
       </section>
 
-      {/* ===== CTA NEGOCIAÇÃO ===== */}
+      {}
       <section className="py-24 relative overflow-hidden">
-        {/* Background gradient animado */}
+        {}
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-background to-accent/20" />
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             x: ['-100%', '100%'],
           }}
-          transition={{ 
-            duration: 15, 
+          transition={{
+            duration: 15,
             repeat: Infinity,
             ease: "linear"
           }}
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
         />
-        
+
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <AnimatedSection>
             <motion.div
@@ -552,12 +549,12 @@ export default function HomeContent() {
                 Quer vender seu veículo?
               </h2>
               <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
-                Inicie uma negociação e converse diretamente com nossos especialistas. 
+                Inicie uma negociação e converse diretamente com nossos especialistas.
                 Avaliação justa e pagamento rápido.
               </p>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link 
-                  href="/negociacao" 
+                <Link
+                  href="/negociacao"
                   className="btn-accent inline-flex items-center gap-2 text-lg px-10 py-5 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 transition-all duration-300 group"
                 >
                   <MessageCircle className="w-5 h-5" />

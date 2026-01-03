@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  MessageCircle, 
-  ShoppingCart, 
-  User, 
+import {
+  MessageCircle,
+  ShoppingCart,
+  User,
   Phone,
   ArrowRight,
   Clock,
@@ -84,9 +84,9 @@ export default function ClientePage() {
   const [showNameModal, setShowNameModal] = useState(false)
 
   useEffect(() => {
-    // Verificar se já existe nome salvo
+
     const savedName = getUserName()
-    
+
     if (hasUserName() && savedName) {
       setName(savedName)
       loadData(savedName)
@@ -103,10 +103,10 @@ export default function ClientePage() {
         fetch(`/api/client/negotiations?customerName=${encodeURIComponent(customerName)}`),
         fetch(`/api/client/orders?customerName=${encodeURIComponent(customerName)}`),
       ])
-      
+
       const negData = await negResponse.json()
       const ordersData = await ordersResponse.json()
-      
+
       setNegotiations(Array.isArray(negData) ? negData : [])
       setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {
@@ -135,7 +135,6 @@ export default function ClientePage() {
     }
   }
 
-  // Mostrar modal de nome se necessário
   if (showNameModal) {
     return (
       <NameModal
@@ -160,7 +159,7 @@ export default function ClientePage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -187,7 +186,7 @@ export default function ClientePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Negociações */}
+            {}
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
@@ -215,8 +214,8 @@ export default function ClientePage() {
                       <div key={neg.id} className="card-static p-5 hover:border-primary/50 transition-colors">
                         <div className="flex items-start gap-4">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-                            <img 
-                              src={neg.carImage} 
+                            <img
+                              src={neg.carImage}
                               alt={neg.carName}
                               className="w-full h-full object-cover"
                             />
@@ -237,13 +236,13 @@ export default function ClientePage() {
                                 </span>
                               )}
                             </div>
-                            
+
                             {neg.lastMessage && (
                               <p className="text-text-muted text-sm truncate mb-2">
                                 {neg.lastMessage}
                               </p>
                             )}
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-text-muted text-xs">
                                 {formatDate(neg.updatedAt)}
@@ -258,7 +257,7 @@ export default function ClientePage() {
               )}
             </div>
 
-            {/* Pedidos */}
+            {}
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
@@ -286,8 +285,8 @@ export default function ClientePage() {
                       <div key={order.id} className="card-static p-5 hover:border-primary/50 transition-colors">
                         <div className="flex items-start gap-4">
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-surface flex-shrink-0">
-                            <img 
-                              src={order.carImage} 
+                            <img
+                              src={order.carImage}
                               alt={order.carName}
                               className="w-full h-full object-cover"
                             />
@@ -311,19 +310,19 @@ export default function ClientePage() {
                                 </span>
                               )}
                             </div>
-                            
+
                             <div className="mb-2">
                               <p className="text-accent font-bold">
                                 {formatPrice(order.totalPrice)}
                               </p>
                             </div>
-                            
+
                             {order.lastMessage && (
                               <p className="text-text-muted text-sm truncate mb-2">
                                 {order.lastMessage}
                               </p>
                             )}
-                            
+
                             <div className="flex items-center justify-between">
                               <span className="text-text-muted text-xs">
                                 {formatDate(order.updatedAt)}
@@ -343,5 +342,4 @@ export default function ClientePage() {
     </div>
   )
 }
-
 

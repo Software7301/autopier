@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/dashboard/negotiations] Iniciando busca de negociações...')
-  
+
   try {
     const negotiations = await prisma.negotiation.findMany({
       include: {
@@ -78,7 +78,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([], { status: 200 })
     }
 
-    // SEMPRE retornar array vazio em caso de erro (não objeto de erro)
     console.warn('⚠️ [GET /api/dashboard/negotiations] Erro desconhecido. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }

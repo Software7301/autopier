@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   console.log('📋 [GET /api/cars] Iniciando busca de carros...')
-  
+
   try {
     const searchParams = request.nextUrl.searchParams
     const category = searchParams.get('category')
@@ -44,16 +44,14 @@ export async function GET(request: NextRequest) {
     console.error('Error message:', error.message)
     console.error('Error stack:', error.stack?.substring(0, 500))
 
-    // Em caso de erro, retornar array vazio para não quebrar o frontend
     console.warn('⚠️ [GET /api/cars] Erro ao buscar carros. Retornando array vazio.')
     return NextResponse.json([], { status: 200 })
   }
 }
 
-// =======================
 export async function POST(request: NextRequest) {
   console.log('🚗 [POST /api/cars] Iniciando criação de veículo...')
-  
+
   try {
     const body = await request.json()
     console.log('🚗 [POST /api/cars] Dados recebidos:', {
@@ -85,7 +83,6 @@ export async function POST(request: NextRequest) {
       available,
     } = body
 
-    // Validações obrigatórias
     if (!name || !brand || !model || !year || !price || !category || !imageUrl) {
       console.error('❌ [POST /api/cars] Campos obrigatórios faltando:', {
         name: !!name,
@@ -114,10 +111,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar tipos numéricos
     const yearNum = Number(year)
     const priceNum = Number(price)
-    
+
     if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
       console.error('❌ [POST /api/cars] Ano inválido:', year)
       return NextResponse.json(
@@ -134,10 +130,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar enums
     const validFuelTypes = ['FLEX', 'GASOLINA', 'DIESEL', 'ELETRICO', 'HIBRIDO']
     const validTransmissionTypes = ['MANUAL', 'AUTOMATIC']
-    
+
     const finalFuel = validFuelTypes.includes(fuel) ? fuel : 'FLEX'
     const finalTransmission = validTransmissionTypes.includes(transmission) ? transmission : 'AUTOMATIC'
 
@@ -160,7 +155,6 @@ export async function POST(request: NextRequest) {
 
     console.log('🚗 [POST /api/cars] Dados processados:', carData)
 
-    // Criar veículo - o pooler gerencia conexões automaticamente
     const car = await prisma.car.create({
       data: carData,
     })
@@ -173,7 +167,6 @@ export async function POST(request: NextRequest) {
     console.error('Error code:', error.code)
     console.error('Error message:', error.message)
 
-    // Erros de validação do Prisma
     if (error.code === 'P2002') {
       const field = error.meta?.target?.[0] || 'campo'
       return NextResponse.json(
@@ -189,9 +182,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Erro genérico
     return NextResponse.json(
-      { 
+      {
         error: 'Erro ao criar veículo',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         code: error.code || 'UNKNOWN_ERROR',

@@ -1,13 +1,13 @@
 export default function DashboardLoading() {
   return (
     <div className="space-y-8 animate-pulse">
-      {/* Header */}
+      {}
       <div>
         <div className="h-8 bg-surface-card rounded w-48 mb-2" />
         <div className="h-5 bg-surface-card rounded w-72" />
       </div>
 
-      {/* Stats Cards */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="card p-6">
@@ -21,7 +21,7 @@ export default function DashboardLoading() {
         ))}
       </div>
 
-      {/* Charts */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-6">
           <div className="h-6 bg-surface-card rounded w-40 mb-6" />
@@ -33,7 +33,7 @@ export default function DashboardLoading() {
         </div>
       </div>
 
-      {/* Recent Orders */}
+      {}
       <div className="card p-6">
         <div className="h-6 bg-surface-card rounded w-48 mb-6" />
         <div className="space-y-4">
