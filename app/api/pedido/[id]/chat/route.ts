@@ -23,9 +23,18 @@ export async function GET(
 
     const order = await prisma.order.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        customerName: true,
         messages: {
           orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            sender: true,
+            senderName: true,
+          },
         },
       },
     })

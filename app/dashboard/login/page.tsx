@@ -46,6 +46,7 @@ export default function DashboardLoginPage() {
                 alt="AutoPier"
                 fill
                 className="object-contain"
+                sizes="64px"
               />
             </div>
           </Link>

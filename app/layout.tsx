@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Outfit, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import Header from '@/components/Header'
-import Footer from '@/components/Footer'
+import FooterWrapper from '@/components/FooterWrapper'
 import ClientProviders from '@/components/ClientProviders'
 
 const outfit = Outfit({
@@ -41,7 +41,7 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
-          <Footer />
+          <FooterWrapper />
         </ClientProviders>
       </body>
     </html>

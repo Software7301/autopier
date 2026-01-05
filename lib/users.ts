@@ -22,7 +22,7 @@ export async function getOrCreateSeller(): Promise<string> {
         },
       })
     }
-
+    
     return seller.id
   } catch (error: any) {
 

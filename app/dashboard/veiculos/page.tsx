@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Edit, Trash2, X, Car, CheckCircle2, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Car, CheckCircle2, AlertCircle, Upload, Image as ImageIcon, Ban, Info, Power } from 'lucide-react'
 
 interface Car {
   id: string
@@ -22,11 +22,22 @@ interface Car {
   createdAt: string
 }
 
+interface CarConstraints {
+  [carId: string]: {
+    hasConstraints: boolean
+    ordersCount: number
+    negotiationsCount: number
+    canDelete: boolean
+  }
+}
+
 export default function VeiculosPage() {
   const [cars, setCars] = useState<Car[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingCar, setEditingCar] = useState<Car | null>(null)
+  const [carConstraints, setCarConstraints] = useState<CarConstraints>({})
+  const [checkingConstraints, setCheckingConstraints] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -88,6 +99,8 @@ export default function VeiculosPage() {
 
       if (Array.isArray(data)) {
         setCars(data)
+        // Verificar vínculos para todos os veículos
+        checkAllCarConstraints(data.map(car => car.id))
       } else {
         console.error('Resposta da API não é um array:', data)
         setCars([])
@@ -102,6 +115,40 @@ export default function VeiculosPage() {
     }
   }
 
+  async function checkCarConstraints(carId: string) {
+    if (checkingConstraints.has(carId)) return
+
+    setCheckingConstraints(prev => new Set(prev).add(carId))
+    
+    try {
+      const response = await fetch(`/api/cars/${carId}/check-constraints`)
+      if (response.ok) {
+        const data = await response.json()
+        setCarConstraints(prev => ({
+          ...prev,
+          [carId]: data,
+        }))
+      }
+    } catch (error) {
+      console.error(`Erro ao verificar vínculos do veículo ${carId}:`, error)
+    } finally {
+      setCheckingConstraints(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(carId)
+        return newSet
+      })
+    }
+  }
+
+  async function checkAllCarConstraints(carIds: string[]) {
+    // Verificar vínculos em paralelo, mas limitado
+    const batchSize = 5
+    for (let i = 0; i < carIds.length; i += batchSize) {
+      const batch = carIds.slice(i, i + batchSize)
+      await Promise.all(batch.map(id => checkCarConstraints(id)))
+    }
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -111,7 +158,6 @@ export default function VeiculosPage() {
     setSuccessMessage('')
 
     try {
-
       const { uploadImageToSupabase } = await import('@/lib/upload')
 
       const imageUrl = await uploadImageToSupabase(file, 'cars')
@@ -236,30 +282,34 @@ export default function VeiculosPage() {
       console.log('Veículo salvo:', savedCar)
 
       setSuccessMessage(editingCar ? 'Veículo atualizado com sucesso!' : 'Veículo adicionado com sucesso!')
-      setShowModal(false)
+      setErrorMessage('')
 
       await fetchCars()
 
-      if (!editingCar) {
-        setFormData({
-          name: '',
-          brand: '',
-          model: '',
-          year: new Date().getFullYear(),
-          price: '',
-          category: 'SUV',
-          imageUrl: '',
-          mileage: '',
-          description: '',
-          color: '',
-          fuel: 'FLEX',
-          transmission: 'AUTOMATIC',
-          available: true,
-        })
-        setImagePreview('')
-      }
-
-      setTimeout(() => setSuccessMessage(''), 3000)
+      // Fechar modal após 2 segundos mostrando a mensagem de sucesso
+      setTimeout(() => {
+        setShowModal(false)
+        setSuccessMessage('')
+        
+        if (!editingCar) {
+          setFormData({
+            name: '',
+            brand: '',
+            model: '',
+            year: new Date().getFullYear(),
+            price: '',
+            category: 'SUV',
+            imageUrl: '',
+            mileage: '',
+            description: '',
+            color: '',
+            fuel: 'FLEX',
+            transmission: 'AUTOMATIC',
+            available: true,
+          })
+          setImagePreview('')
+        }
+      }, 2000)
     } catch (error: any) {
       console.error('Erro ao salvar veículo:', error)
       const errorMessage = error.message || 'Erro ao salvar veículo'
@@ -275,22 +325,128 @@ export default function VeiculosPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este veículo?')) return
+    // Verificar vínculos antes de tentar deletar
+    const constraints = carConstraints[id]
+    if (constraints && constraints.hasConstraints) {
+      setErrorMessage('Este veículo possui vínculos e não pode ser deletado. Use a opção "Desativar" em vez disso.')
+      setTimeout(() => setErrorMessage(''), 5000)
+      return
+    }
+
+    if (!confirm('Tem certeza que deseja excluir este veículo? Esta ação não pode ser desfeita.')) return
+
+    // Limpar mensagens anteriores
+    setSuccessMessage('')
+    setErrorMessage('')
 
     try {
       const response = await fetch(`/api/cars/${id}`, {
         method: 'DELETE',
       })
 
+      // Verificar o tipo de conteúdo antes de tentar ler JSON
+      const contentType = response.headers.get('content-type')
+      let data: any = {}
+
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = await response.json()
+        } catch (jsonError) {
+          console.error('Erro ao ler resposta JSON:', jsonError)
+        }
+      }
+
       if (!response.ok) {
-        throw new Error('Erro ao excluir veículo')
+        const errorMessage = data.error || `Erro ao excluir veículo (${response.status})`
+        throw new Error(errorMessage)
       }
 
       setSuccessMessage('Veículo excluído com sucesso!')
-      fetchCars()
+      // Remover das constraints
+      setCarConstraints(prev => {
+        const newConstraints = { ...prev }
+        delete newConstraints[id]
+        return newConstraints
+      })
+      await fetchCars()
       setTimeout(() => setSuccessMessage(''), 3000)
-    } catch (error) {
-      setErrorMessage('Erro ao excluir veículo')
+    } catch (error: any) {
+      console.error('Erro ao excluir veículo:', error)
+      const errorMessage = error.message || 'Erro ao excluir veículo'
+      setErrorMessage(errorMessage)
+      setTimeout(() => setErrorMessage(''), 5000)
+    }
+  }
+
+  async function handleDeactivate(id: string) {
+    if (!confirm('Tem certeza que deseja desativar este veículo? Ele não aparecerá mais para novos pedidos, mas o histórico será mantido.')) return
+
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      const car = cars.find(c => c.id === id)
+      if (!car) {
+        throw new Error('Veículo não encontrado')
+      }
+
+      const response = await fetch(`/api/cars/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...car,
+          available: false,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao desativar veículo')
+      }
+
+      setSuccessMessage('Veículo desativado com sucesso!')
+      await fetchCars()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error: any) {
+      console.error('Erro ao desativar veículo:', error)
+      setErrorMessage(error.message || 'Erro ao desativar veículo')
+      setTimeout(() => setErrorMessage(''), 5000)
+    }
+  }
+
+  async function handleActivate(id: string) {
+    if (!confirm('Tem certeza que deseja ativar este veículo? Ele voltará a aparecer para novos pedidos.')) return
+
+    setSuccessMessage('')
+    setErrorMessage('')
+
+    try {
+      const car = cars.find(c => c.id === id)
+      if (!car) {
+        throw new Error('Veículo não encontrado')
+      }
+
+      const response = await fetch(`/api/cars/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...car,
+          available: true,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao ativar veículo')
+      }
+
+      setSuccessMessage('Veículo ativado com sucesso!')
+      await fetchCars()
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error: any) {
+      console.error('Erro ao ativar veículo:', error)
+      setErrorMessage(error.message || 'Erro ao ativar veículo')
+      setTimeout(() => setErrorMessage(''), 5000)
     }
   }
 
@@ -318,7 +474,6 @@ export default function VeiculosPage() {
 
   return (
     <div className="space-y-6">
-      {}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Gerenciar Veículos</h1>
@@ -330,22 +485,21 @@ export default function VeiculosPage() {
         </button>
       </div>
 
-      {}
-      {successMessage && (
+      {/* Mensagens fora do modal - só aparecem quando o modal está fechado */}
+      {successMessage && !showModal && (
         <div className="card-static p-4 bg-green-500/10 border-green-500/30 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-400" />
           <p className="text-green-400">{successMessage}</p>
         </div>
       )}
 
-      {errorMessage && (
+      {errorMessage && !showModal && (
         <div className="card-static p-4 bg-red-500/10 border-red-500/30 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-400" />
           <p className="text-red-400">{errorMessage}</p>
         </div>
       )}
 
-      {}
       {cars.length === 0 ? (
         <div className="card-static text-center py-16">
           <Car className="w-16 h-16 text-text-muted mx-auto mb-4" />
@@ -409,7 +563,7 @@ export default function VeiculosPage() {
                           ? 'bg-green-500/20 text-green-400'
                           : 'bg-red-500/20 text-red-400'
                       }`}>
-                        {car.available ? 'Disponível' : 'Vendido'}
+                        {car.available ? 'Disponível' : 'Sem estoque'}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-text-secondary text-sm">
@@ -424,13 +578,95 @@ export default function VeiculosPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(car.id)}
-                          className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-text-secondary hover:text-red-400"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        
+                        {/* Botão Ativar - aparece quando veículo está desativado */}
+                        {!car.available && (
+                          <div className="relative group">
+                            <button
+                              onClick={() => handleActivate(car.id)}
+                              className="p-2 hover:bg-green-500/10 rounded-lg transition-colors text-text-secondary hover:text-green-400"
+                              title="Ativar veículo"
+                            >
+                              <Power className="w-4 h-4" />
+                            </button>
+                            <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-10">
+                              <div className="bg-surface-dark border border-primary/30 rounded-lg p-2 text-xs text-white whitespace-nowrap shadow-lg">
+                                Ativar veículo
+                                <div className="text-text-muted text-[10px] mt-1">
+                                  Volta a aparecer para pedidos
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Botão Desativar - aparece quando há vínculos OU quando veículo está ativo */}
+                        {(carConstraints[car.id]?.hasConstraints || car.available) && (
+                          <div className="relative group">
+                            <button
+                              onClick={() => handleDeactivate(car.id)}
+                              className="p-2 hover:bg-yellow-500/10 rounded-lg transition-colors text-text-secondary hover:text-yellow-400"
+                              title="Desativar veículo (mantém histórico)"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </button>
+                            <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-10">
+                              <div className="bg-surface-dark border border-primary/30 rounded-lg p-2 text-xs text-white whitespace-nowrap shadow-lg">
+                                Desativar veículo
+                                <div className="text-text-muted text-[10px] mt-1">
+                                  Mantém histórico intacto
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Botão Deletar - desabilitado quando há vínculos */}
+                        <div className="relative group">
+                          <button
+                            onClick={() => handleDelete(car.id)}
+                            disabled={carConstraints[car.id]?.hasConstraints || false}
+                            className={`
+                              p-2 rounded-lg transition-colors
+                              ${carConstraints[car.id]?.hasConstraints
+                                ? 'opacity-50 cursor-not-allowed text-text-muted'
+                                : 'hover:bg-red-500/10 text-text-secondary hover:text-red-400'
+                              }
+                            `}
+                            title={
+                              carConstraints[car.id]?.hasConstraints
+                                ? `Não é possível deletar. Veículo possui ${carConstraints[car.id].ordersCount} pedido(s) e ${carConstraints[car.id].negotiationsCount} negociação(ões) vinculados.`
+                                : 'Excluir veículo permanentemente'
+                            }
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          {carConstraints[car.id]?.hasConstraints && (
+                            <div className="absolute right-0 bottom-full mb-2 hidden group-hover:block z-10 w-64">
+                              <div className="bg-surface-dark border border-red-500/30 rounded-lg p-3 text-xs text-white shadow-lg">
+                                <div className="flex items-start gap-2">
+                                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <div className="font-semibold text-red-400 mb-1">
+                                      Não é possível deletar
+                                    </div>
+                                    <div className="text-text-muted space-y-1">
+                                      {carConstraints[car.id].ordersCount > 0 && (
+                                        <div>• {carConstraints[car.id].ordersCount} pedido(s) vinculado(s)</div>
+                                      )}
+                                      {carConstraints[car.id].negotiationsCount > 0 && (
+                                        <div>• {carConstraints[car.id].negotiationsCount} negociação(ões) vinculada(s)</div>
+                                      )}
+                                      <div className="mt-2 pt-2 border-t border-surface-border">
+                                        Use "Desativar" para ocultar o veículo mantendo o histórico.
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -441,7 +677,6 @@ export default function VeiculosPage() {
         </div>
       )}
 
-      {}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-background-secondary rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -458,7 +693,21 @@ export default function VeiculosPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6" noValidate>
-              {}
+              {/* Mensagens dentro do modal */}
+              {successMessage && showModal && (
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <p className="text-green-400 text-sm">{successMessage}</p>
+                </div>
+              )}
+
+              {errorMessage && showModal && (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <p className="text-red-400 text-sm">{errorMessage}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Nome do Veículo <span className="text-red-400">*</span>
@@ -473,7 +722,6 @@ export default function VeiculosPage() {
                 />
               </div>
 
-              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -503,7 +751,6 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {}
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -547,12 +794,10 @@ export default function VeiculosPage() {
                     required
                     value={formData.price || ''}
                     onChange={(e) => {
-
                       const formatted = formatCurrency(e.target.value)
                       setFormData({ ...formData, price: formatted || '' })
                     }}
                     onBlur={(e) => {
-
                       if (e.target.value) {
                         const formatted = formatCurrency(e.target.value)
                         setFormData({ ...formData, price: formatted || '' })
@@ -564,7 +809,6 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -589,18 +833,16 @@ export default function VeiculosPage() {
                     className="input-field w-full"
                   >
                     <option value="true">Disponível</option>
-                    <option value="false">Vendido</option>
+                    <option value="false">Sem estoque</option>
                   </select>
                 </div>
               </div>
 
-              {}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Imagem do Veículo <span className="text-red-400">*</span>
                 </label>
 
-                {}
                 {(imagePreview || formData.imageUrl) && (
                   <div className="mb-4">
                     <img
@@ -615,7 +857,6 @@ export default function VeiculosPage() {
                   </div>
                 )}
 
-                {}
                 <div className="relative">
                   <input
                     ref={fileInputRef}
@@ -658,7 +899,6 @@ export default function VeiculosPage() {
                   </label>
                 </div>
 
-                {}
                 <div className="mt-3">
                   <details className="text-sm">
                     <summary className="text-text-muted cursor-pointer hover:text-white transition-colors">
@@ -672,7 +912,7 @@ export default function VeiculosPage() {
                           setFormData({ ...formData, imageUrl: e.target.value || '' })
                           setImagePreview(e.target.value || '')
                         }}
-                        placeholder="https:
+                        placeholder="https://exemplo.com/imagem.jpg"
                         className="input-field w-full"
                       />
                       <p className="text-xs text-text-muted">
@@ -683,7 +923,6 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -716,7 +955,6 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
@@ -744,7 +982,6 @@ export default function VeiculosPage() {
                 </div>
               </div>
 
-              {}
               <div className="flex items-center justify-end gap-4 pt-4 border-t border-surface-border">
                 <button
                   type="button"

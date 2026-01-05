@@ -5,6 +5,7 @@ import { Settings, Building, Mail, MapPin, Save, CheckCircle, User, Briefcase, C
 import Image from 'next/image'
 import { uploadImageToSupabase } from '@/lib/upload'
 import { motion } from 'framer-motion'
+import { COMPANY_INFO } from '@/lib/company-info'
 
 export default function ConfiguracoesPage() {
   const [saved, setSaved] = useState(false)
@@ -28,6 +29,7 @@ export default function ConfiguracoesPage() {
     { value: 'Marketing', label: 'Marketing' },
     { value: 'Financeiro', label: 'Financeiro' },
     { value: 'Atendente', label: 'Atendente' },
+    { value: 'Desenvolvedor', label: 'Desenvolvedor' },
     { value: 'Outro', label: 'Outro' },
   ]
 
@@ -163,14 +165,14 @@ export default function ConfiguracoesPage() {
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Nome da Empresa
             </label>
-            <p className="text-white">AutoPier</p>
+            <p className="text-white">{COMPANY_INFO.name}</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
               Slogan
             </label>
-            <p className="text-white">Concessionária Premium</p>
+            <p className="text-white">{COMPANY_INFO.slogan}</p>
           </div>
 
           <div>
@@ -178,7 +180,7 @@ export default function ConfiguracoesPage() {
               <Mail className="w-4 h-4 inline mr-1" />
               Email
             </label>
-            <p className="text-white">autopiernovacapitalrp@gmail.com</p>
+            <p className="text-white">{COMPANY_INFO.email}</p>
           </div>
 
           <div>
@@ -186,7 +188,7 @@ export default function ConfiguracoesPage() {
               <MapPin className="w-4 h-4 inline mr-1" />
               Endereço
             </label>
-            <p className="text-white">San Fierro</p>
+            <p className="text-white">{COMPANY_INFO.address}</p>
           </div>
         </div>
       </motion.div>

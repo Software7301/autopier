@@ -17,6 +17,7 @@ interface Car {
   fuel: string
   transmission: string
   featured?: boolean
+  available?: boolean
 }
 
 interface CarCardProps {
@@ -51,6 +52,8 @@ const fuelLabels: Record<string, string> = {
 }
 
 export default function CarCard({ car }: CarCardProps) {
+  const isUnavailable = car.available === false
+  
   return (
     <div className="card group overflow-hidden">
       {/* Imagem */}
@@ -65,8 +68,15 @@ export default function CarCard({ car }: CarCardProps) {
         
         {/* Badge de Destaque */}
         {car.featured && (
-          <div className="absolute top-4 left-4 bg-accent text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+          <div className="absolute top-4 left-4 bg-accent text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg z-20">
             ⭐ Destaque
+          </div>
+        )}
+        
+        {/* Badge de Status - Sem estoque */}
+        {isUnavailable && (
+          <div className={`absolute ${car.featured ? 'top-16 left-4' : 'top-4 left-4'} bg-orange-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg shadow-orange-500/50 z-20`}>
+            Sem estoque
           </div>
         )}
         
@@ -115,75 +125,14 @@ export default function CarCard({ car }: CarCardProps) {
               {formatPrice(car.price)}
             </p>
           </div>
-          <div className="flex items-center gap-2">
             <Link
               href={`/checkout/${car.id}`}
               prefetch={true}
-              className="btn-primary flex items-center gap-2 !px-4 !py-2.5 text-sm flex-1 justify-center"
+            className="btn-primary flex items-center gap-2 !px-4 !py-2.5 text-sm w-full justify-center"
             >
               <ShoppingCart className="w-4 h-4" />
               Comprar
             </Link>
-            <button
-              onClick={async (e) => {
-                e.preventDefault()
-                const phone = localStorage.getItem('autopier_user_phone')
-                const name = localStorage.getItem('autopier_user_name')
-                
-                if (!phone) {
-                  const userPhone = prompt('Digite seu telefone para negociar:')
-                  if (!userPhone) return
-                  const userName = prompt('Digite seu nome:') || 'Cliente'
-                  localStorage.setItem('autopier_user_phone', userPhone.replace(/\D/g, ''))
-                  localStorage.setItem('autopier_user_name', userName)
-                  
-                  try {
-                    const response = await fetch('/api/negociacao/quick', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        carId: car.id,
-                        customerPhone: userPhone,
-                        customerName: userName,
-                      }),
-                    })
-                    const data = await response.json()
-                    if (data.chatId) {
-                      window.location.href = `/negociacao/${data.chatId}`
-                    }
-                  } catch (error) {
-                    console.error('Erro ao criar negociação:', error)
-                    alert('Erro ao iniciar negociação. Tente novamente.')
-                  }
-                } else {
-                  try {
-                    const response = await fetch('/api/negociacao/quick', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        carId: car.id,
-                        customerPhone: phone,
-                        customerName: name || 'Cliente',
-                      }),
-                    })
-                    const data = await response.json()
-                    if (data.chatId) {
-                      window.location.href = `/negociacao/${data.chatId}`
-                    }
-                  } catch (error) {
-                    console.error('Erro ao criar negociação:', error)
-                    alert('Erro ao iniciar negociação. Tente novamente.')
-                  }
-                }
-              }}
-              className="btn-secondary flex items-center gap-2 !px-4 !py-2.5 text-sm"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              Negociar
-            </button>
-          </div>
         </div>
       </div>
     </div>

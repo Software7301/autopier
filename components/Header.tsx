@@ -38,6 +38,7 @@ export default function Header() {
                 fill
                 className="object-cover"
                 priority
+                sizes="48px"
               />
             </div>
             <div>

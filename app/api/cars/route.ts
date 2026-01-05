@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const category = searchParams.get('category')
-    const available = searchParams.get('available') !== 'false'
+    const includeUnavailable = searchParams.get('available') === 'false'
 
     console.log('📋 [GET /api/cars] Parâmetros:', {
       category,
-      available,
+      includeUnavailable,
     })
 
     const where: any = {}
@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
       where.category = category
     }
 
-    if (available) {
+    // Se não incluir indisponíveis, filtrar apenas disponíveis
+    if (!includeUnavailable) {
       where.available = true
     }
 
@@ -35,6 +36,15 @@ export async function GET(request: NextRequest) {
     })
 
     console.log(`✅ [GET /api/cars] Encontrados ${Array.isArray(cars) ? cars.length : 0} carros`)
+    
+    // Log para debug - verificar se available está vindo
+    if (cars.length > 0) {
+      console.log('📋 [GET /api/cars] Exemplo de carro:', {
+        id: cars[0].id,
+        name: cars[0].name,
+        available: cars[0].available,
+      })
+    }
 
     return NextResponse.json(Array.isArray(cars) ? cars : [])
   } catch (error: any) {

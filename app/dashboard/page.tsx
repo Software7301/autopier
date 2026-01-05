@@ -394,7 +394,7 @@ export default function DashboardPage() {
                         fill="#e5e5e5"
                         fontSize={12}
                         fontWeight={600}
-                        formatter={(value: number) => value > 0 ? value : ''}
+                        formatter={(value: any) => (typeof value === 'number' && value > 0) ? value : ''}
                       />
                     </Bar>
                   </BarChart>

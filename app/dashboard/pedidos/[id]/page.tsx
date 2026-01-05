@@ -130,6 +130,7 @@ export default function PedidoDetalhePage() {
 
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isFetchingRef = useRef(false)
 
   const { playSound, notifyNewMessage, isTabActive } = useNotifications()
 
@@ -152,9 +153,6 @@ export default function PedidoDetalhePage() {
           setMessages(initialMessages)
 
           prevMessagesCountRef.current = initialMessages.length
-          console.log('📋 [Dashboard Pedidos] Carregamento inicial:', {
-            messagesCount: initialMessages.length,
-          })
         }
       } catch (error) {
         console.error('Erro ao buscar dados:', error)
@@ -167,65 +165,76 @@ export default function PedidoDetalhePage() {
   }, [pedidoId])
 
   useEffect(() => {
-
     if (pedido?.status === 'COMPLETED' || isCompleting) return
+    if (!pedidoId) return
 
-    const interval = setInterval(async () => {
-      if (!pedidoId) return
+    let isPolling = true
+    let lastMessageCount = prevMessagesCountRef.current || messages.length
+
+    const pollMessages = async () => {
+      if (!isPolling || !pedidoId || isFetchingRef.current) return
+
+      isFetchingRef.current = true
       try {
-        const response = await fetch(`/api/pedido/${pedidoId}/chat`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.messages && data.messages.length > messages.length) {
+        const response = await fetch(`/api/pedido/${pedidoId}/chat`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
+        
+        if (!response.ok) {
+          isFetchingRef.current = false
+          return
+        }
 
+        const data = await response.json()
+        if (data.messages && Array.isArray(data.messages)) {
+          const newMessageCount = data.messages.length
+
+          if (newMessageCount > lastMessageCount) {
             const lastNewMessage = data.messages[data.messages.length - 1]
 
-            console.log('📩 [Dashboard Pedidos] Nova mensagem detectada:', {
-              senderName: lastNewMessage?.senderName,
-              sender: lastNewMessage?.sender,
-              prevCount: prevMessagesCountRef.current,
-              newCount: data.messages.length,
-            })
+            if (lastNewMessage && lastNewMessage.sender === 'cliente' && lastMessageCount > 0) {
+              const clienteNome = lastNewMessage.senderName || pedido?.cliente?.nome || 'Cliente'
+              playSound()
+              setToastMessage({
+                title: clienteNome,
+                message: lastNewMessage.content,
+              })
+              setShowToast(true)
+              setTimeout(() => setShowToast(false), 4000)
 
-            if (lastNewMessage && lastNewMessage.sender === 'cliente') {
-
-              if (prevMessagesCountRef.current > 0) {
-                console.log('🔔 [Dashboard Pedidos] Disparando notificação!')
-
-                playSound()
-
-                setToastMessage({
-                  title: `${lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente'}`,
-                  message: lastNewMessage.content,
-                })
-                setShowToast(true)
-                setTimeout(() => setShowToast(false), 4000)
-
-                if (!isTabActive()) {
-                  notifyNewMessage(
-                    lastNewMessage.senderName || pedido?.cliente.nome || 'Cliente',
-                    lastNewMessage.content,
-                    'pedido'
-                  )
-                }
-              } else {
-                console.log('⏭️ [Dashboard Pedidos] Primeira carga - não notificar')
+              if (!isTabActive()) {
+                notifyNewMessage(
+                  clienteNome,
+                  lastNewMessage.content,
+                  'pedido'
+                )
               }
-            } else {
-              console.log('⏭️ [Dashboard Pedidos] Mensagem própria (funcionário) - não notificar')
             }
 
             setMessages(data.messages)
-            prevMessagesCountRef.current = data.messages.length
+            lastMessageCount = newMessageCount
+            prevMessagesCountRef.current = newMessageCount
+          } else if (newMessageCount === lastMessageCount && data.messages.length > 0) {
+            setMessages(data.messages)
           }
         }
       } catch (error) {
-
+        console.error('Erro ao buscar mensagens:', error)
+      } finally {
+        isFetchingRef.current = false
       }
-    }, 2000)
+    }
 
-    return () => clearInterval(interval)
-  }, [pedidoId, messages.length, pedido?.cliente.nome, pedido?.status, isCompleting, playSound, notifyNewMessage, isTabActive])
+    const interval = setInterval(pollMessages, 3000)
+
+    return () => {
+      isPolling = false
+      clearInterval(interval)
+    }
+  }, [pedidoId, pedido?.status, isCompleting, playSound, notifyNewMessage, isTabActive, pedido?.cliente?.nome])
 
   function scrollToBottom() {
     if (messagesContainerRef.current) {
@@ -249,7 +258,10 @@ export default function PedidoDetalhePage() {
       const employeeName = getEmployeeName()
       const response = await fetch(`/api/pedido/${pedidoId}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
         body: JSON.stringify({
           content: messageContent,
           sender: 'funcionario',
@@ -260,12 +272,18 @@ export default function PedidoDetalhePage() {
       if (response.ok) {
         const sentMessage = await response.json()
         setMessages((prev) => [...prev, sentMessage])
+        prevMessagesCountRef.current = messages.length + 1
+      } else {
+        const errorData = await response.json()
+        console.error('Erro ao enviar mensagem:', errorData)
+        setNewMessage(messageContent)
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
+      setNewMessage(messageContent)
     } finally {
       setSending(false)
-      inputRef.current?.focus()
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
@@ -406,12 +424,11 @@ export default function PedidoDetalhePage() {
 
   return (
     <motion.div
-      className="space-y-6"
+      className="space-y-4"
       initial={{ opacity: 1 }}
       animate={{ opacity: isFadingOut ? 0 : 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
-      {}
       <NotificationToast
         show={showToast}
         title={toastMessage.title}
@@ -419,18 +436,17 @@ export default function PedidoDetalhePage() {
         onClose={() => setShowToast(false)}
       />
 
-      {}
       {isCompleting && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card-static p-6 bg-green-500/10 border-green-500/30"
+          className="card-static p-4 bg-green-500/10 border-green-500/30"
         >
           <div className="flex items-center gap-3">
-            <CheckCircle className="w-6 h-6 text-green-400" />
+            <CheckCircle className="w-5 h-5 text-green-400" />
             <div className="flex-1">
-              <h3 className="text-white font-semibold">Pedido Finalizado!</h3>
-              <p className="text-text-secondary text-sm">
+              <h3 className="text-white font-semibold text-sm">Pedido Finalizado!</h3>
+              <p className="text-text-secondary text-xs">
                 O pedido foi marcado como finalizado e contará como venda. Redirecionando...
               </p>
             </div>
@@ -438,9 +454,8 @@ export default function PedidoDetalhePage() {
         </motion.div>
       )}
 
-      {}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center gap-3">
           <Link
             href="/dashboard/pedidos"
             className="p-2 hover:bg-surface rounded-lg transition-colors"
@@ -448,19 +463,18 @@ export default function PedidoDetalhePage() {
             <ArrowLeft className="w-5 h-5 text-text-secondary" />
           </Link>
           <div>
-            <h1 className="text-2xl font-display font-bold text-white">
+            <h1 className="text-xl font-display font-bold text-white">
               Pedido #{pedidoId.slice(0, 8)}
             </h1>
-            <p className="text-text-secondary">
+            <p className="text-text-secondary text-sm">
               {formatDate(pedido.dataPedido)}
             </p>
           </div>
         </div>
 
-        {}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-text-muted text-sm">Status:</span>
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-text-muted text-xs">Status:</span>
+          <div className="flex gap-1.5 flex-wrap">
             {statusOptions.map((s) => {
               const statusInfo = statusLabels[s]
               const isActive = pedido.status === s
@@ -468,7 +482,7 @@ export default function PedidoDetalhePage() {
                 <button
                   key={s}
                   onClick={() => handleStatusChange(s)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     isActive
                       ? `${statusInfo.bg} ${statusInfo.color} ring-2 ring-offset-2 ring-offset-background ring-current`
                       : 'bg-surface text-text-muted hover:text-white'
@@ -482,33 +496,30 @@ export default function PedidoDetalhePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 card-static flex flex-col overflow-hidden">
-          {}
-          <div className="p-5 border-b border-surface-border">
+          <div className="p-4 border-b border-surface-border">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-primary" />
+              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-white font-semibold">Chat com {pedido.cliente.nome}</h3>
-                <p className="text-text-muted text-sm">Alinhe os detalhes da entrega</p>
+                <h3 className="text-white font-semibold text-sm">Chat com {pedido.cliente.nome}</h3>
+                <p className="text-text-muted text-xs">Alinhe os detalhes da entrega</p>
               </div>
             </div>
           </div>
 
-          {}
           <div
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-5 space-y-4 min-h-[350px] max-h-[450px]"
+            className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[400px]"
           >
             {messages.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center">
                 <div>
-                  <MessageSquare className="w-12 h-12 text-text-muted mx-auto mb-3" />
-                  <p className="text-text-secondary">Nenhuma mensagem ainda</p>
-                  <p className="text-text-muted text-sm">Inicie a conversa com o cliente!</p>
+                  <MessageSquare className="w-10 h-10 text-text-muted mx-auto mb-2" />
+                  <p className="text-text-secondary text-sm">Nenhuma mensagem ainda</p>
+                  <p className="text-text-muted text-xs">Inicie a conversa com o cliente!</p>
                 </div>
               </div>
             ) : (
@@ -557,8 +568,8 @@ export default function PedidoDetalhePage() {
 
           {}
           {pedido.status !== 'COMPLETED' && !isCompleting && (
-            <form onSubmit={handleSendMessage} className="p-5 border-t border-surface-border bg-surface-dark/50">
-              <div className="flex items-center gap-4">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-surface-border bg-surface-dark/50">
+              <div className="flex items-center gap-3">
                 <input
                   ref={inputRef}
                   type="text"
@@ -573,117 +584,111 @@ export default function PedidoDetalhePage() {
                     }
                   }}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 input-field !py-3.5 text-base"
+                  className="flex-1 input-field !py-2.5 text-sm"
                   disabled={sending || isCompleting}
                 />
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || sending || isCompleting}
-                  className="btn-primary !p-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary !p-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sending ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </form>
           )}
 
-          {}
           {(pedido.status === 'COMPLETED' || isCompleting) && (
-            <div className="p-5 border-t border-surface-border bg-surface-dark/50">
-              <div className="flex items-center justify-center gap-3 text-text-muted">
-                <CheckCircle className="w-5 h-5 text-green-400" />
-                <p className="text-sm">Chat encerrado - Pedido finalizado</p>
+            <div className="p-4 border-t border-surface-border bg-surface-dark/50">
+              <div className="flex items-center justify-center gap-2 text-text-muted">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <p className="text-xs">Chat encerrado - Pedido finalizado</p>
               </div>
             </div>
           )}
         </div>
 
-        {}
-        <div className="space-y-5">
-          {}
-          <div className="card-static p-6 space-y-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
+        <div className="space-y-3">
+          <div className="card-static p-4 space-y-3">
+            <h3 className="font-semibold text-white text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
               Dados do Cliente
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <p className="text-text-muted text-sm">Nome Completo</p>
-                <p className="text-white font-medium">{pedido.cliente.nome}</p>
+                <p className="text-text-muted text-xs">Nome Completo</p>
+                <p className="text-white font-medium text-sm">{pedido.cliente.nome}</p>
               </div>
               <div>
-                <p className="text-text-muted text-sm">RG</p>
-                <p className="text-white">{pedido.cliente.rg}</p>
+                <p className="text-text-muted text-xs">RG</p>
+                <p className="text-white text-sm">{pedido.cliente.rg}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-text-muted" />
-                <a href={`tel:${pedido.cliente.telefone}`} className="text-primary hover:underline">
+                <Phone className="w-3.5 h-3.5 text-text-muted" />
+                <a href={`tel:${pedido.cliente.telefone}`} className="text-primary hover:underline text-sm">
                   {pedido.cliente.telefone}
                 </a>
               </div>
             </div>
           </div>
 
-          {}
-          <div className="card-static p-6 space-y-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <Car className="w-5 h-5 text-primary" />
+          <div className="card-static p-4 space-y-3">
+            <h3 className="font-semibold text-white text-sm flex items-center gap-2">
+              <Car className="w-4 h-4 text-primary" />
               Veículo
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <p className="text-text-muted text-sm">Modelo</p>
-                <p className="text-white font-medium">{pedido.veiculo.nome}</p>
+                <p className="text-text-muted text-xs">Modelo</p>
+                <p className="text-white font-medium text-sm">{pedido.veiculo.nome}</p>
               </div>
               <div>
-                <p className="text-text-muted text-sm">Ano</p>
-                <p className="text-white">{pedido.veiculo.ano}</p>
+                <p className="text-text-muted text-xs">Ano</p>
+                <p className="text-white text-sm">{pedido.veiculo.ano}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-text-muted" />
-                <span className="text-white">{pedido.veiculo.cor}</span>
+                <Palette className="w-3.5 h-3.5 text-text-muted" />
+                <span className="text-white text-sm">{pedido.veiculo.cor}</span>
               </div>
             </div>
           </div>
 
-          {}
-          <div className="card-static p-6 space-y-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" />
+          <div className="card-static p-4 space-y-3">
+            <h3 className="font-semibold text-white text-sm flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-primary" />
               Pagamento
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <p className="text-text-muted text-sm">Forma de Pagamento</p>
-                <p className="text-white font-medium">{pedido.pagamento.metodo}</p>
+                <p className="text-text-muted text-xs">Forma de Pagamento</p>
+                <p className="text-white font-medium text-sm">{pedido.pagamento.metodo}</p>
               </div>
               {pedido.pagamento.parcelas > 1 && (
                 <div>
-                  <p className="text-text-muted text-sm">Parcelas</p>
-                  <p className="text-white">
+                  <p className="text-text-muted text-xs">Parcelas</p>
+                  <p className="text-white text-sm">
                     {pedido.pagamento.parcelas}x de {formatPrice(pedido.pagamento.valorParcela)}
                   </p>
                 </div>
               )}
-              <div className="pt-3 border-t border-surface-border">
-                <p className="text-text-muted text-sm">Valor Total</p>
-                <p className="text-accent font-bold text-2xl">
+              <div className="pt-2 border-t border-surface-border">
+                <p className="text-text-muted text-xs">Valor Total</p>
+                <p className="text-accent font-bold text-xl">
                   {formatPrice(pedido.pagamento.valorTotal)}
                 </p>
               </div>
 
-              {}
               {pedido.entrega?.data && (
-                <div className="pt-3 border-t border-surface-border space-y-1">
-                  <p className="text-text-muted text-sm">Entrega Agendada</p>
-                  <p className="text-white font-medium">
+                <div className="pt-2 border-t border-surface-border space-y-1">
+                  <p className="text-text-muted text-xs">Entrega Agendada</p>
+                  <p className="text-white font-medium text-sm">
                     {formatDate(pedido.entrega.data)}
                   </p>
                   {pedido.entrega.observacoes && (
@@ -696,13 +701,12 @@ export default function PedidoDetalhePage() {
             </div>
           </div>
 
-          {}
-          <div className="card-static p-6 space-y-3">
+          <div className="card-static p-4 space-y-2">
             <button
               onClick={() => handleStatusChange('COMPLETED')}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="btn-primary w-full flex items-center justify-center gap-2 !py-2.5 text-sm"
             >
-              <CheckCircle className="w-5 h-5" />
+              <CheckCircle className="w-4 h-4" />
               Marcar como Finalizado
             </button>
             <button
@@ -717,9 +721,9 @@ export default function PedidoDetalhePage() {
                 setDeliveryNotes(pedido.entrega?.observacoes || '')
                 setShowScheduleModal(true)
               }}
-              className="btn-secondary w-full flex items-center justify-center gap-2"
+              className="btn-secondary w-full flex items-center justify-center gap-2 !py-2.5 text-sm"
             >
-              <Calendar className="w-5 h-5" />
+              <Calendar className="w-4 h-4" />
               Agendar Entrega
             </button>
           </div>

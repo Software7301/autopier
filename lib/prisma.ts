@@ -21,7 +21,7 @@ function convertToPoolerUrl(url: string | undefined): string | undefined {
     }
 
     if (!poolerUrl.includes('connection_limit=')) {
-      poolerUrl = `${poolerUrl}&connection_limit=1`
+      poolerUrl = `${poolerUrl}&connection_limit=10`
     }
     return poolerUrl
   }
@@ -36,7 +36,7 @@ function convertToPoolerUrl(url: string | undefined): string | undefined {
       let poolerUrl = url.replace(originalHost, poolerHost).replace(':5432', ':6543')
 
       const separator = poolerUrl.includes('?') ? '&' : '?'
-      poolerUrl = `${poolerUrl}${separator}pgbouncer=true&sslmode=require&connection_limit=1`
+      poolerUrl = `${poolerUrl}${separator}pgbouncer=true&sslmode=require&connection_limit=10`
 
       console.log('✅ [Prisma] Convertido para Supabase Connection Pooler')
       return poolerUrl

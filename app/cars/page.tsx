@@ -19,6 +19,7 @@ interface Car {
   fuel: string
   transmission: string
   featured: boolean
+  available?: boolean
 }
 
 const categoryFilters = [
@@ -39,8 +40,15 @@ export default function CarsPage() {
   async function fetchCars() {
     try {
       setLoading(true)
-      const response = await fetch('/api/cars', { cache: 'no-store' })
+      // Buscar todos os veículos (disponíveis e sem estoque)
+      const response = await fetch('/api/cars?available=false', { cache: 'no-store' })
       const data = await response.json()
+      
+      console.log('Carros carregados com status:', data.map((car: any) => ({
+        id: car.id,
+        name: car.name,
+        available: car.available
+      })))
 
       const safeData = Array.isArray(data) ? data : []
 
