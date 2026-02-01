@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String        @id @default(cuid())
+  supabaseId           String?       @unique
+  name                 String
+  email                String        @unique
+  phone                String?
+  avatarUrl            String?
+  role                 UserRole      @default(CUSTOMER)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  messagesSent         Message[]
+  negotiationsAsBuyer  Negotiation[] @relation("BuyerNegotiations")
+  negotiationsAsSeller Negotiation[] @relation("SellerNegotiations")
+  orders               Order[]
+
+  @@map("users")
+}
+
+model Car {
+  id           String           @id @default(cuid())
+  name         String
+  brand        String
+  model        String
+  year         Int
+  price        Float
+  category     CarCategory
+  description  String?
+  imageUrl     String
+  mileage      Int?
+  color        String?
+  fuel         FuelType         @default(FLEX)
+  transmission TransmissionType @default(AUTOMATIC)
+  featured     Boolean          @default(false)
+  available    Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  negotiations Negotiation[]
+  orders       Order[]
+
+  @@map("cars")
+}
+
+model Order {
+  id            String         @id @default(cuid())
+  userId        String?
+  carId         String
+  customerName  String
+  customerRg    String
+  customerPhone String
+  paymentMethod PaymentMethod
+  totalPrice    Float
+  installments  Int            @default(1)
+  selectedColor String?
+  status        OrderStatus    @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  car           Car            @relation(fields: [carId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
+  messages      OrderMessage[]
+
+  @@map("orders")
+}
+
+model Negotiation {
+  id                 String            @id @default(cuid())
+  type               NegotiationType
+  carId              String?
+  buyerId            String
+  sellerId           String
+  status             NegotiationStatus @default(OPEN)
+  vehicleName        String?
+  vehicleBrand       String?
+  vehicleYear        Int?
+  vehicleMileage     Int?
+  vehicleDescription String?
+  vehicleImageUrl    String?
+  proposedPrice      Float?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  messages           Message[]
+  buyer              User              @relation("BuyerNegotiations", fields: [buyerId], references: [id])
+  car                Car?              @relation(fields: [carId], references: [id])
+  seller             User              @relation("SellerNegotiations", fields: [sellerId], references: [id])
+
+  @@map("negotiations")
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  content       String
+  negotiationId String
+  senderId      String
+  createdAt     DateTime    @default(now())
+  negotiation   Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  sender        User        @relation(fields: [senderId], references: [id])
+
+  @@map("messages")
+}
+
+model OrderMessage {
+  id         String   @id @default(cuid())
+  content    String
+  orderId    String
+  senderName String
+  sender     String // 'cliente' ou 'funcionario'
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_messages")
+}
+
+enum UserRole {
+  CUSTOMER
+  DEALER
+  ADMIN
+}
+
+enum CarCategory {
+  SUV
+  ESPORTIVO
+  SEDAN
+  COMPACTO
+}
+
+enum FuelType {
+  FLEX
+  GASOLINA
+  DIESEL
+  ELETRICO
+  HIBRIDO
+}
+
+enum TransmissionType {
+  MANUAL
+  AUTOMATIC
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  FINANCIAMENTO
+  OUTROS
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum NegotiationType {
+  BUY
+  SELL
+}
+
+enum NegotiationStatus {
+  OPEN
+  IN_PROGRESS
+  ACCEPTED
+  REJECTED
+  CLOSED
+}

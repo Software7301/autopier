@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Base Styles ===== */
+@layer base {
+  :root {
+    --background: 15 15 15;
+    --foreground: 255 255 255;
+  }
+
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+    color: #ffffff;
+    min-height: 100vh;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+  }
+}
+
+/* ===== Component Styles ===== */
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-hover text-white font-semibold px-6 py-3 rounded-xl
+           transition-all duration-300 shadow-lg hover:shadow-glow
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-white
+           font-semibold px-6 py-3 rounded-xl transition-all duration-300;
+  }
+
+  .btn-accent {
+    @apply bg-accent hover:bg-accent-hover text-white font-semibold px-6 py-3 rounded-xl
+           transition-all duration-300 shadow-lg hover:shadow-glow-accent active:scale-95;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-surface rounded-2xl border border-surface-border shadow-card
+           transition-all duration-300 hover:shadow-card-hover hover:border-primary/30
+           hover:-translate-y-1;
+  }
+
+  .card-static {
+    @apply bg-surface rounded-2xl border border-surface-border shadow-card;
+  }
+
+  /* Inputs */
+  .input-field {
+    @apply w-full bg-background-secondary border border-surface-border rounded-xl px-4 py-3
+           text-white placeholder-text-muted focus:outline-none focus:border-primary
+           focus:ring-2 focus:ring-primary/20 transition-all duration-300;
+  }
+
+  .select-field {
+    @apply w-full bg-background-secondary border border-surface-border rounded-xl px-4 py-3
+           text-white focus:outline-none focus:border-primary cursor-pointer
+           transition-all duration-300 appearance-none;
+  }
+
+  /* Filter Pills */
+  .filter-pill {
+    @apply px-5 py-2.5 rounded-full font-medium transition-all duration-300 cursor-pointer
+           border border-surface-border hover:border-primary/50;
+  }
+
+  .filter-pill-active {
+    @apply bg-primary text-white border-primary shadow-glow;
+  }
+
+  .filter-pill-inactive {
+    @apply bg-surface text-text-secondary hover:text-white hover:bg-surface-hover;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-surface/80 backdrop-blur-md border border-surface-border/50;
+  }
+
+  /* Text Gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary via-primary-light to-accent bg-clip-text text-transparent;
+  }
+
+  /* Shimmer Animation */
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/* ===== Utility Styles ===== */
+@layer utilities {
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+  .animate-delay-400 {
+    animation-delay: 400ms;
+  }
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+}
+
+/* ===== Hero Background Pattern ===== */
+.hero-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+}
+
+/* ===== Chat Styles ===== */
+.chat-bubble-sent {
+  @apply bg-primary text-white rounded-2xl rounded-br-md shadow-md;
+  padding: 12px 16px;
+  min-width: 70px;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.chat-bubble-received {
+  @apply bg-surface-hover text-white rounded-2xl rounded-bl-md shadow-md border border-surface-border/50;
+  padding: 12px 16px;
+  min-width: 70px;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* ===== Loading Spinner ===== */
+.spinner {
+  @apply w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin;
+}
+

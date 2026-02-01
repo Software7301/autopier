@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { isPrismaConnectionError } from '@/lib/utils'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  console.log('📋 [GET /api/client/orders] Iniciando busca de pedidos do cliente...')
+
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const customerName = searchParams.get('customerName')
+
+    console.log('📋 [GET /api/client/orders] Parâmetros:', {
+      hasCustomerName: !!customerName,
+      customerName: customerName?.substring(0, 20) + '...',
+    })
+
+    if (!customerName || !customerName.trim()) {
+      console.warn('⚠️ [GET /api/client/orders] Nome do cliente não fornecido. Retornando array vazio.')
+      return NextResponse.json([])
+    }
+
+    const normalizedName = customerName.trim()
+
+    const orders = await prisma.order.findMany({
+      where: {
+        customerName: {
+          equals: normalizedName,
+          mode: 'insensitive',
+        },
+      },
+      include: {
+        car: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    })
+
+    console.log(`✅ [GET /api/client/orders] Encontrados ${orders.length} pedidos`)
+
+    const clientOrders = orders.map(order => ({
+      id: order.id,
+      carId: order.carId,
+      carName: order.car.name,
+      carBrand: order.car.brand,
+      carImage: order.car.imageUrl,
+      status: order.status,
+      totalPrice: order.totalPrice,
+      selectedColor: order.selectedColor,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      lastMessage: '',
+      lastMessageAt: order.updatedAt.toISOString(),
+      unreadCount: 0,
+    }))
+
+    return NextResponse.json(clientOrders)
+  } catch (error: any) {
+    console.error('❌ [GET /api/client/orders] Erro ao buscar pedidos do cliente:', error)
+    console.error('Error code:', error.code)
+    console.error('Error name:', error.name)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack?.substring(0, 500))
+
+    if (isPrismaConnectionError(error)) {
+      console.warn('⚠️ [GET /api/client/orders] Banco indisponível. Retornando array vazio.')
+      return NextResponse.json([], { status: 200 })
+    }
+
+    console.warn('⚠️ [GET /api/client/orders] Erro desconhecido. Retornando array vazio.')
+    return NextResponse.json([], { status: 200 })
+  }
+}
+
