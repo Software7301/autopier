@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import NameModal from '@/components/NameModal'
 import { getUserName, setUserName, hasUserName, clearUserName } from '@/lib/userName'
-import { getSession } from '@/lib/auth-client'
+import { getSession, supabaseAuth, onAuthStateChange } from '@/lib/auth-client'
 
 interface Order {
   id: string
@@ -69,42 +69,70 @@ export default function ClientePage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
+    // Listener para mudanças de autenticação (captura callback do Supabase)
+    const { data: { subscription } } = onAuthStateChange(async (session) => {
+      console.log('🔄 Mudança de estado de autenticação:', !!session)
+      if (session) {
+        setIsAuthenticated(true)
+        // Processar sessão quando recebida do callback
+        await processSession(session)
+      }
+    })
+
     async function checkAuth() {
       try {
+        console.log('🔍 Verificando autenticação...')
         const session = await getSession()
+        console.log('🔍 Sessão encontrada:', !!session)
+        
         if (session) {
           setIsAuthenticated(true)
-          // Se autenticado, usar o nome do usuário da sessão ou buscar do servidor
-          const savedName = getUserName()
-          if (hasUserName() && savedName) {
-            setName(savedName)
-            loadData(savedName)
-          } else {
-            // Buscar dados do usuário autenticado
-            try {
-              const userResponse = await fetch('/api/auth/me')
-              if (userResponse.ok) {
-                const userData = await userResponse.json()
-                if (userData?.name) {
-                  setName(userData.name)
-                  setUserName(userData.name)
-                  loadData(userData.name)
-                } else {
-                  setShowNameModal(true)
-                  setLoading(false)
-                }
+          console.log('✅ Usuário autenticado:', session.user?.email)
+          
+          // Buscar dados do usuário autenticado do servidor
+          try {
+            const userResponse = await fetch('/api/auth/me')
+            console.log('🔍 Resposta do /api/auth/me:', userResponse.status)
+            
+            if (userResponse.ok) {
+              const userData = await userResponse.json()
+              console.log('✅ Dados do usuário:', userData)
+              
+              if (userData?.name) {
+                setName(userData.name)
+                setUserName(userData.name)
+                loadData(userData.name)
               } else {
-                setShowNameModal(true)
-                setLoading(false)
+                // Se não tiver nome, usar email ou username
+                const displayName = userData?.email?.split('@')[0] || 'Usuário'
+                setName(displayName)
+                setUserName(displayName)
+                loadData(displayName)
               }
-            } catch (error) {
-              console.error('Erro ao buscar dados do usuário:', error)
-              setShowNameModal(true)
-              setLoading(false)
+            } else {
+              // Se falhar, tentar usar dados da sessão
+              const displayName = session.user?.user_metadata?.name || 
+                                 session.user?.user_metadata?.full_name ||
+                                 session.user?.email?.split('@')[0] || 
+                                 'Usuário'
+              setName(displayName)
+              setUserName(displayName)
+              loadData(displayName)
             }
+          } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error)
+            // Fallback: usar dados da sessão
+            const displayName = session.user?.user_metadata?.name || 
+                               session.user?.user_metadata?.full_name ||
+                               session.user?.email?.split('@')[0] || 
+                               'Usuário'
+            setName(displayName)
+            setUserName(displayName)
+            loadData(displayName)
           }
         } else {
           // Não autenticado - redirecionar para login
+          console.log('❌ Não autenticado, redirecionando para login')
           setIsAuthenticated(false)
           router.push('/auth/login?redirect=/cliente')
         }
@@ -117,8 +145,64 @@ export default function ClientePage() {
         setCheckingAuth(false)
       }
     }
+    
     checkAuth()
-  }, [])
+    
+    // Cleanup do listener
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
+
+  async function processSession(session: any) {
+    try {
+      console.log('✅ Processando sessão:', session.user?.email)
+      
+      // Buscar dados do usuário autenticado do servidor
+      try {
+        const userResponse = await fetch('/api/auth/me')
+        console.log('🔍 Resposta do /api/auth/me:', userResponse.status)
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          console.log('✅ Dados do usuário:', userData)
+          
+          if (userData?.name) {
+            setName(userData.name)
+            setUserName(userData.name)
+            loadData(userData.name)
+          } else {
+            // Se não tiver nome, usar email ou username
+            const displayName = userData?.email?.split('@')[0] || 'Usuário'
+            setName(displayName)
+            setUserName(displayName)
+            loadData(displayName)
+          }
+        } else {
+          // Se falhar, tentar usar dados da sessão
+          const displayName = session.user?.user_metadata?.name || 
+                             session.user?.user_metadata?.full_name ||
+                             session.user?.email?.split('@')[0] || 
+                             'Usuário'
+          setName(displayName)
+          setUserName(displayName)
+          loadData(displayName)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error)
+        // Fallback: usar dados da sessão
+        const displayName = session.user?.user_metadata?.name || 
+                           session.user?.user_metadata?.full_name ||
+                           session.user?.email?.split('@')[0] || 
+                           'Usuário'
+        setName(displayName)
+        setUserName(displayName)
+        loadData(displayName)
+      }
+    } catch (error) {
+      console.error('Erro ao processar sessão:', error)
+    }
+  }
 
   async function loadData(customerName: string) {
     setLoadingData(true)

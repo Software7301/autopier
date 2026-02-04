@@ -40,8 +40,8 @@ export default function CarsPage() {
   async function fetchCars() {
     try {
       setLoading(true)
-      // Buscar todos os veículos (disponíveis e sem estoque)
-      const response = await fetch('/api/cars?available=false', { cache: 'no-store' })
+      // Buscar apenas veículos disponíveis (não desativados)
+      const response = await fetch('/api/cars', { cache: 'no-store' })
       const data = await response.json()
       
       console.log('Carros carregados com status:', data.map((car: any) => ({

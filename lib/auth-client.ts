@@ -16,7 +16,14 @@ export const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
 function getCallbackUrl(): string {
   // Sempre usar window.location.origin para garantir URL absoluta
   if (typeof window !== 'undefined') {
-    return `${window.location.origin}/api/auth/callback`
+    // Em desenvolvimento, usar o Site URL do Supabase como fallback
+    const origin = window.location.origin
+    // Se for localhost, tentar usar o Site URL configurado no Supabase
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      // Retornar a URL completa para o callback
+      return `${origin}/api/auth/callback`
+    }
+    return `${origin}/api/auth/callback`
   }
   // Fallback para variável de ambiente se disponível (server-side)
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -27,13 +34,18 @@ function getCallbackUrl(): string {
 }
 
 export async function signInWithGoogle(redirectTo?: string) {
-  const callbackUrl = getCallbackUrl()
   const nextUrl = redirectTo || '/cliente'
   
+  // Usar o Site URL diretamente - o Supabase vai redirecionar para lá
+  // E depois vamos capturar a sessão na página
   const { data, error } = await supabaseAuth.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${callbackUrl}?next=${encodeURIComponent(nextUrl)}`,
+      // Usar o Site URL configurado no Supabase (localhost:3000)
+      // O Supabase vai redirecionar para lá após autenticação
+      redirectTo: typeof window !== 'undefined' 
+        ? `${window.location.origin}${nextUrl}`
+        : undefined,
     },
   })
 
@@ -41,20 +53,6 @@ export async function signInWithGoogle(redirectTo?: string) {
   return data
 }
 
-export async function signInWithDiscord(redirectTo?: string) {
-  const callbackUrl = getCallbackUrl()
-  const nextUrl = redirectTo || '/cliente'
-  
-  const { data, error } = await supabaseAuth.auth.signInWithOAuth({
-    provider: 'discord',
-    options: {
-      redirectTo: `${callbackUrl}?next=${encodeURIComponent(nextUrl)}`,
-    },
-  })
-
-  if (error) throw error
-  return data
-}
 
 export async function signOut() {
   const { error } = await supabaseAuth.auth.signOut()

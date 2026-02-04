@@ -108,7 +108,7 @@ export default function DashboardLayout({
             <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 shadow-md shadow-primary/20 group-hover:border-primary/50 transition-all duration-300 flex-shrink-0">
               <Image
                 src="/images.png"
-                alt="AutoPier"
+                alt="Takahashi"
                 width={40}
                 height={40}
                 className="object-cover w-full h-full"
@@ -117,7 +117,7 @@ export default function DashboardLayout({
             </div>
             <div>
               <h1 className="text-xl font-display font-bold text-white">
-                Auto<span className="text-primary">Pier</span>
+                Takahashi
               </h1>
               <p className="text-xs text-text-muted">Painel Administrativo</p>
             </div>
@@ -171,7 +171,7 @@ export default function DashboardLayout({
               {employeeRole && (
                 <p className="text-primary text-xs font-medium truncate">{employeeRole}</p>
               )}
-              <p className="text-text-muted text-xs truncate">autopiernovacapitalrp@gmail.com</p>
+              <p className="text-text-muted text-xs truncate">takahashiconce@gmail.com</p>
             </div>
           </div>
           <Link
@@ -199,7 +199,7 @@ export default function DashboardLayout({
               <div className="relative w-8 h-8 rounded-full overflow-hidden border border-primary/30 flex-shrink-0">
                 <Image
                   src="/images.png"
-                  alt="AutoPier"
+                  alt="Takahashi"
                   width={32}
                   height={32}
                   className="object-cover w-full h-full"

@@ -12,7 +12,7 @@ export async function GET() {
       lastName: '',
       role: '',
       avatarUrl: '',
-      email: 'autopiernovacapitalrp@gmail.com',
+      email: 'takahashiconce@gmail.com',
     })
   } catch (error: any) {
     console.error('❌ Erro ao buscar informações do funcionário:', error)
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       lastName,
       role,
       avatarUrl: avatarUrl || '',
-      email: 'autopiernovacapitalrp@gmail.com',
+      email: 'takahashiconce@gmail.com',
     })
   } catch (error: any) {
     console.error('❌ Erro ao salvar informações do funcionário:', error)

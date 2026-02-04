@@ -61,7 +61,7 @@ export async function getOrCreateUser(supabaseUser: any) {
     return null
   }
 
-  // Extrair nome do usuário (suporta Google e Discord)
+  // Extrair nome do usuário (suporta Google)
   const metadata = supabaseUser.user_metadata || {}
   const userName = 
     metadata.full_name || 
@@ -70,7 +70,7 @@ export async function getOrCreateUser(supabaseUser: any) {
     metadata.preferred_username ||
     supabaseUser.email.split('@')[0]
 
-  // Extrair avatar (suporta Google e Discord)
+  // Extrair avatar (suporta Google)
   const avatarUrl = 
     metadata.avatar_url || 
     metadata.picture || 
