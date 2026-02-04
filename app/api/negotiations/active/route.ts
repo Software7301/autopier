@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
           categoria: category,
           imagem:
             neg.car?.imageUrl ||
-            'https:
+            'https://via.placeholder.com/400x300?text=Sem+Imagem',
           ano: isVenda ? (neg.vehicleYear || neg.car?.year || null) : (neg.car?.year || null),
         },
         status: 'Em negociação',

@@ -49,7 +49,7 @@ export async function GET() {
       not_configured: {
         title: '⚠️ Variáveis não configuradas',
         steps: [
-          '1. Acesse o painel da Vercel: https:
+          '1. Acesse o painel da Vercel: https://vercel.com/dashboard',
           '2. Vá em Settings > Environment Variables',
           '3. Adicione NEXT_PUBLIC_SUPABASE_URL',
           '4. Adicione NEXT_PUBLIC_SUPABASE_ANON_KEY',

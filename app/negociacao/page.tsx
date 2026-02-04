@@ -52,7 +52,6 @@ export default function NegociacaoPage() {
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-
       if (!file.type.startsWith('image/')) {
         alert('Por favor, selecione apenas arquivos de imagem')
         return
@@ -152,7 +151,6 @@ export default function NegociacaoPage() {
       const data = await response.json()
 
       if (response.ok && data.id) {
-
         const phone = negotiationType === 'SELL' ? sellForm.customerPhone : buyForm.customerPhone
         localStorage.setItem('autopier_user_phone', phone.replace(/\D/g, ''))
         localStorage.setItem('autopier_user_name', negotiationType === 'SELL' ? sellForm.customerName : buyForm.customerName)
@@ -172,7 +170,6 @@ export default function NegociacaoPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
             <span className="text-gradient">Negociação</span> de Veículos
@@ -183,10 +180,8 @@ export default function NegociacaoPage() {
           </p>
         </div>
 
-        {}
         {!negotiationType && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {}
             <button
               onClick={() => setNegotiationType('SELL')}
               className="card p-8 text-left group"
@@ -206,7 +201,6 @@ export default function NegociacaoPage() {
               </span>
             </button>
 
-            {}
             <Link
               href="/cars"
               className="card p-8 text-left group"
@@ -228,7 +222,6 @@ export default function NegociacaoPage() {
           </div>
         )}
 
-        {}
         {negotiationType === 'SELL' && (
           <div className="card-static p-8 animate-fade-in">
             <div className="flex items-center justify-between mb-8">
@@ -250,7 +243,6 @@ export default function NegociacaoPage() {
             </div>
 
             <form onSubmit={handleStartNegotiation} className="space-y-6">
-              {}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
@@ -344,7 +336,6 @@ export default function NegociacaoPage() {
                 />
               </div>
 
-              {}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   <ImageIcon className="w-4 h-4 inline mr-2" />
@@ -354,7 +345,41 @@ export default function NegociacaoPage() {
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image}
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-border rounded-xl cursor-pointer hover:border-accent transition-colors"
+                    >
+                      <Upload className="w-8 h-8 text-text-muted mb-2" />
+                      <span className="text-sm text-text-secondary">
+                        Clique para fazer upload ou arraste a imagem aqui
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative w-full h-64 rounded-xl overflow-hidden border border-surface-border">
+                      <Image
+                        src={imagePreview}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -413,7 +438,6 @@ export default function NegociacaoPage() {
           </div>
         )}
 
-        {}
         {negotiationType === 'BUY' && (
           <div className="card-static p-8 animate-fade-in">
             <div className="flex items-center justify-between mb-8">
@@ -464,7 +488,6 @@ export default function NegociacaoPage() {
                 />
               </div>
 
-              {}
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -516,7 +539,6 @@ export default function NegociacaoPage() {
               </button>
             </form>
 
-            {}
             <div className="mt-6 text-center">
               <p className="text-text-muted text-sm">
                 Já sabe qual veículo quer?{' '}

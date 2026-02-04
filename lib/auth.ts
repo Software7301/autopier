@@ -61,6 +61,21 @@ export async function getOrCreateUser(supabaseUser: any) {
     return null
   }
 
+  // Extrair nome do usuário (suporta Google e Discord)
+  const metadata = supabaseUser.user_metadata || {}
+  const userName = 
+    metadata.full_name || 
+    metadata.name || 
+    metadata.global_name || 
+    metadata.preferred_username ||
+    supabaseUser.email.split('@')[0]
+
+  // Extrair avatar (suporta Google e Discord)
+  const avatarUrl = 
+    metadata.avatar_url || 
+    metadata.picture || 
+    null
+
   let user = await prisma.user.findUnique({
     where: { supabaseId: supabaseUser.id },
   })
@@ -70,14 +85,14 @@ export async function getOrCreateUser(supabaseUser: any) {
       where: { email: supabaseUser.email },
       update: {
         supabaseId: supabaseUser.id,
-        name: supabaseUser.user_metadata?.full_name || supabaseUser.email.split('@')[0],
-        avatarUrl: supabaseUser.user_metadata?.avatar_url || null,
+        name: userName,
+        avatarUrl: avatarUrl,
       },
       create: {
         supabaseId: supabaseUser.id,
         email: supabaseUser.email,
-        name: supabaseUser.user_metadata?.full_name || supabaseUser.email.split('@')[0],
-        avatarUrl: supabaseUser.user_metadata?.avatar_url || null,
+        name: userName,
+        avatarUrl: avatarUrl,
         role: 'CUSTOMER',
       },
     })
@@ -85,8 +100,8 @@ export async function getOrCreateUser(supabaseUser: any) {
     user = await prisma.user.update({
       where: { id: user.id },
       data: {
-        name: supabaseUser.user_metadata?.full_name || user.name,
-        avatarUrl: supabaseUser.user_metadata?.avatar_url || user.avatarUrl,
+        name: userName || user.name,
+        avatarUrl: avatarUrl || user.avatarUrl,
       },
     })
   }

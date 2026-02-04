@@ -6,10 +6,12 @@ import Link from 'next/link'
 import {
   ShoppingCart,
   Loader2,
-  User
+  User,
+  MessageSquare
 } from 'lucide-react'
 import NameModal from '@/components/NameModal'
 import { getUserName, setUserName, hasUserName, clearUserName } from '@/lib/userName'
+import { getSession } from '@/lib/auth-client'
 
 interface Order {
   id: string
@@ -63,17 +65,59 @@ export default function ClientePage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingData, setLoadingData] = useState(false)
   const [showNameModal, setShowNameModal] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    const savedName = getUserName()
-
-    if (hasUserName() && savedName) {
-      setName(savedName)
-      loadData(savedName)
-    } else {
-      setShowNameModal(true)
-      setLoading(false)
+    async function checkAuth() {
+      try {
+        const session = await getSession()
+        if (session) {
+          setIsAuthenticated(true)
+          // Se autenticado, usar o nome do usuário da sessão ou buscar do servidor
+          const savedName = getUserName()
+          if (hasUserName() && savedName) {
+            setName(savedName)
+            loadData(savedName)
+          } else {
+            // Buscar dados do usuário autenticado
+            try {
+              const userResponse = await fetch('/api/auth/me')
+              if (userResponse.ok) {
+                const userData = await userResponse.json()
+                if (userData?.name) {
+                  setName(userData.name)
+                  setUserName(userData.name)
+                  loadData(userData.name)
+                } else {
+                  setShowNameModal(true)
+                  setLoading(false)
+                }
+              } else {
+                setShowNameModal(true)
+                setLoading(false)
+              }
+            } catch (error) {
+              console.error('Erro ao buscar dados do usuário:', error)
+              setShowNameModal(true)
+              setLoading(false)
+            }
+          }
+        } else {
+          // Não autenticado - redirecionar para login
+          setIsAuthenticated(false)
+          router.push('/auth/login?redirect=/cliente')
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error)
+        // Em caso de erro, redirecionar para login
+        setIsAuthenticated(false)
+        router.push('/auth/login?redirect=/cliente')
+      } finally {
+        setCheckingAuth(false)
+      }
     }
+    checkAuth()
   }, [])
 
   async function loadData(customerName: string) {
@@ -108,7 +152,31 @@ export default function ClientePage() {
     }
   }
 
-  if (showNameModal) {
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-text-secondary">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Se não estiver autenticado, não mostrar nada (já foi redirecionado)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-text-secondary">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (showNameModal && isAuthenticated) {
     return (
       <NameModal
         isOpen={showNameModal}
