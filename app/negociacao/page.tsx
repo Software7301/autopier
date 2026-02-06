@@ -247,14 +247,14 @@ export default function NegociacaoPage() {
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
                     <Car className="w-4 h-4 inline mr-2" />
-                    Marca *
+                    Nome do Veículo *
                   </label>
                   <input
                     type="text"
-                    value={sellForm.vehicleBrand}
-                    onChange={(e) => setSellForm({ ...sellForm, vehicleBrand: e.target.value })}
+                    value={sellForm.vehicleName}
+                    onChange={(e) => setSellForm({ ...sellForm, vehicleName: e.target.value })}
                     required
-                    placeholder="Ex: Toyota, Honda, BMW..."
+                    placeholder="Ex: Corolla, Civic, X5..."
                     className="input-field"
                   />
                 </div>
@@ -265,10 +265,10 @@ export default function NegociacaoPage() {
                   </label>
                   <input
                     type="text"
-                    value={sellForm.vehicleName}
-                    onChange={(e) => setSellForm({ ...sellForm, vehicleName: e.target.value })}
+                    value={sellForm.vehicleBrand}
+                    onChange={(e) => setSellForm({ ...sellForm, vehicleBrand: e.target.value })}
                     required
-                    placeholder="Ex: Corolla, Civic, X5..."
+                    placeholder="Ex: Toyota, Honda, BMW..."
                     className="input-field"
                   />
                 </div>
