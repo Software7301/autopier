@@ -45,7 +45,7 @@ export default function Header() {
               <h1 className="text-2xl font-display font-bold text-white">
                 Takahashi
               </h1>
-              <p className="text-xs text-text-muted -mt-1">Auto  Center </p>
+              <p className="text-xs text-text-muted -mt-1">Motors</p>
             </div>
           </Link>
 
