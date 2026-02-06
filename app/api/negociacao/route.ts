@@ -61,6 +61,17 @@ export async function POST(request: NextRequest) {
       }
     } catch (buyerError: any) {
       console.error('❌ Erro ao criar/buscar comprador:', buyerError)
+      console.error('❌ Código do erro:', buyerError.code)
+      console.error('❌ Stack:', buyerError.stack)
+      
+      // Verificar se é erro de coluna não encontrada (Prisma Client desatualizado)
+      if (buyerError.code === 'P2022' || buyerError.message?.includes('does not exist')) {
+        return NextResponse.json(
+          { error: 'Erro de configuração do banco de dados. Execute: npx prisma generate && npx prisma db push' },
+          { status: 500 }
+        )
+      }
+      
       return NextResponse.json(
         { error: `Erro ao processar dados do cliente: ${buyerError.message || 'Erro desconhecido'}` },
         { status: 500 }
@@ -77,6 +88,16 @@ export async function POST(request: NextRequest) {
       }
     } catch (sellerError: any) {
       console.error('❌ Erro ao criar/buscar vendedor:', sellerError)
+      console.error('❌ Código do erro:', sellerError.code)
+      
+      // Verificar se é erro de coluna não encontrada (Prisma Client desatualizado)
+      if (sellerError.code === 'P2022' || sellerError.message?.includes('does not exist')) {
+        return NextResponse.json(
+          { error: 'Erro de configuração do banco de dados. Execute: npx prisma generate && npx prisma db push' },
+          { status: 500 }
+        )
+      }
+      
       return NextResponse.json(
         { error: `Erro ao processar vendedor: ${sellerError.message || 'Erro desconhecido'}` },
         { status: 500 }
