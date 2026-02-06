@@ -81,29 +81,29 @@ export async function GET(request: NextRequest) {
     const redirectUrl = new URL(next, origin)
     
     console.log('✅ Redirecionando para:', redirectUrl.toString())
-    
+
     // Criar resposta de redirecionamento
     const response = NextResponse.redirect(redirectUrl)
     
     // Definir cookies de sessão
     if (data.session.access_token) {
-      response.cookies.set('sb-access-token', data.session.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 dias
-        path: '/',
-      })
+    response.cookies.set('sb-access-token', data.session.access_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+      path: '/',
+    })
     }
     
     if (data.session.refresh_token) {
-      response.cookies.set('sb-refresh-token', data.session.refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 dias
-        path: '/',
-      })
+    response.cookies.set('sb-refresh-token', data.session.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 dias
+      path: '/',
+    })
     }
 
     console.log('✅ Cookies definidos com sucesso')
