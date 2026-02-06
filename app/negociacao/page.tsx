@@ -35,6 +35,7 @@ export default function NegociacaoPage() {
     vehicleDescription: '',
     proposedPrice: '',
     customerName: '',
+    customerStateId: '',
     customerPhone: '',
     vehicleImageUrl: '',
   })
@@ -45,6 +46,7 @@ export default function NegociacaoPage() {
   const [buyForm, setBuyForm] = useState({
     vehicleInterest: '',
     customerName: '',
+    customerStateId: '',
     customerPhone: '',
     message: '',
   })
@@ -76,6 +78,32 @@ export default function NegociacaoPage() {
     setImageFile(null)
     setImagePreview(null)
     setSellForm({ ...sellForm, vehicleImageUrl: '' })
+  }
+
+  function formatUSPhone(value: string): string {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '')
+    
+    // Limita a 10 dígitos
+    const limited = numbers.slice(0, 10)
+    
+    // Aplica a formatação (000) 000-0000
+    if (limited.length <= 3) {
+      return limited
+    } else if (limited.length <= 6) {
+      return `(${limited.slice(0, 3)}) ${limited.slice(3)}`
+    } else {
+      return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`
+    }
+  }
+
+  function handlePhoneChange(formType: 'sell' | 'buy', value: string) {
+    const formatted = formatUSPhone(value)
+    if (formType === 'sell') {
+      setSellForm({ ...sellForm, customerPhone: formatted })
+    } else {
+      setBuyForm({ ...buyForm, customerPhone: formatted })
+    }
   }
 
   function handlePriceChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -382,7 +410,7 @@ export default function NegociacaoPage() {
               </div>
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
                       Nome Completo *
@@ -398,14 +426,30 @@ export default function NegociacaoPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
+                      State ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={sellForm.customerStateId}
+                      onChange={(e) => setSellForm({ ...sellForm, customerStateId: e.target.value })}
+                      required
+                      placeholder="Ex: 0000"
+                      maxLength={4}
+                      pattern="[0-9]{4}"
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
                       Telefone *
                     </label>
                     <input
                       type="tel"
                       value={sellForm.customerPhone}
-                      onChange={(e) => setSellForm({ ...sellForm, customerPhone: e.target.value })}
+                      onChange={(e) => handlePhoneChange('sell', e.target.value)}
                       required
-                      placeholder="(00) 00000-0000"
+                      placeholder="(000) 000-0000"
+                      maxLength={14}
                       className="input-field"
                     />
                   </div>
@@ -490,7 +534,7 @@ export default function NegociacaoPage() {
 
               <div className="border-t border-surface-border pt-6">
                 <h3 className="text-lg font-medium text-white mb-4">Seus Dados</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
                       Nome Completo *
@@ -506,14 +550,30 @@ export default function NegociacaoPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-text-secondary mb-2">
+                      State ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={buyForm.customerStateId}
+                      onChange={(e) => setBuyForm({ ...buyForm, customerStateId: e.target.value })}
+                      required
+                      placeholder="Ex: 0000"
+                      maxLength={4}
+                      pattern="[0-9]{4}"
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
                       Telefone *
                     </label>
                     <input
                       type="tel"
                       value={buyForm.customerPhone}
-                      onChange={(e) => setBuyForm({ ...buyForm, customerPhone: e.target.value })}
+                      onChange={(e) => handlePhoneChange('buy', e.target.value)}
                       required
-                      placeholder="(00) 00000-0000"
+                      placeholder="(000) 000-0000"
+                      maxLength={14}
                       className="input-field"
                     />
                   </div>
