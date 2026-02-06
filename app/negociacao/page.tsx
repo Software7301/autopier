@@ -84,16 +84,16 @@ export default function NegociacaoPage() {
     // Remove tudo que não é número
     const numbers = value.replace(/\D/g, '')
     
-    // Limita a 10 dígitos
-    const limited = numbers.slice(0, 10)
+    // Limita a 9 dígitos (formato: 707 848-904)
+    const limited = numbers.slice(0, 9)
     
-    // Aplica a formatação (000) 000-0000
+    // Aplica a formatação 000 000-000
     if (limited.length <= 3) {
       return limited
     } else if (limited.length <= 6) {
-      return `(${limited.slice(0, 3)}) ${limited.slice(3)}`
+      return `${limited.slice(0, 3)} ${limited.slice(3)}`
     } else {
-      return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`
+      return `${limited.slice(0, 3)} ${limited.slice(3, 6)}-${limited.slice(6)}`
     }
   }
 
@@ -448,8 +448,8 @@ export default function NegociacaoPage() {
                       value={sellForm.customerPhone}
                       onChange={(e) => handlePhoneChange('sell', e.target.value)}
                       required
-                      placeholder="(000) 000-0000"
-                      maxLength={14}
+                      placeholder="707 848-904"
+                      maxLength={11}
                       className="input-field"
                     />
                   </div>
@@ -572,8 +572,8 @@ export default function NegociacaoPage() {
                       value={buyForm.customerPhone}
                       onChange={(e) => handlePhoneChange('buy', e.target.value)}
                       required
-                      placeholder="(000) 000-0000"
-                      maxLength={14}
+                      placeholder="707 848-904"
+                      maxLength={11}
                       className="input-field"
                     />
                   </div>
