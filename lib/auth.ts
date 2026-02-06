@@ -49,8 +49,9 @@ export async function getUser() {
     return null
   }
 
+  // Buscar por email já que não temos mais supabaseId
   const user = await prisma.user.findUnique({
-    where: { supabaseId: session.user.id },
+    where: { email: session.user.email || '' },
   })
 
   return user
@@ -76,20 +77,14 @@ export async function getOrCreateUser(supabaseUser: any) {
     metadata.picture || 
     null
 
+  // Buscar por email já que não temos mais supabaseId
   let user = await prisma.user.findUnique({
-    where: { supabaseId: supabaseUser.id },
+    where: { email: supabaseUser.email },
   })
 
   if (!user) {
-    user = await prisma.user.upsert({
-      where: { email: supabaseUser.email },
-      update: {
-        supabaseId: supabaseUser.id,
-        name: userName,
-        avatarUrl: avatarUrl,
-      },
-      create: {
-        supabaseId: supabaseUser.id,
+    user = await prisma.user.create({
+      data: {
         email: supabaseUser.email,
         name: userName,
         avatarUrl: avatarUrl,
