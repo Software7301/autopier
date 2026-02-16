@@ -73,9 +73,28 @@ function CheckoutContent() {
 
   useEffect(() => {
     async function fetchCar() {
+      if (!carId) {
+        setLoading(false)
+        return
+      }
+      
       try {
         const response = await fetch(`/api/cars/${carId}`)
+        
+        if (!response.ok) {
+          console.error('Erro ao buscar carro:', response.status, response.statusText)
+          setLoading(false)
+          return
+        }
+        
         const data = await response.json()
+        
+        if (!data || !data.id) {
+          console.error('Dados do carro inválidos:', data)
+          setLoading(false)
+          return
+        }
+        
         setCar({
           id: data.id,
           name: data.name,
