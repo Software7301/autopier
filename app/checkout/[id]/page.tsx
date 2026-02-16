@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -46,7 +46,7 @@ function formatPrice(price: number): string {
   }).format(price)
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const params = useParams()
   const router = useRouter()
   const carId = params.id as string
@@ -494,5 +494,20 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="spinner mx-auto" />
+          <p className="text-text-secondary">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   )
 }
