@@ -369,6 +369,20 @@ export default function CheckoutPage() {
                   <p className="font-medium text-white">{paymentMethod.label}</p>
                   <p className="text-xs text-text-muted">{paymentMethod.description}</p>
                 </div>
+                
+                <div className="mt-4 p-5 rounded-xl border-2 border-surface-border bg-surface space-y-3">
+                  <h4 className="text-sm font-semibold text-white mb-3">Dados para Pagamento PIX</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-secondary text-sm">Nome:</span>
+                      <span className="text-white font-medium">Max Takahashi</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-text-secondary text-sm">RG:</span>
+                      <span className="text-white font-medium">525</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <button
