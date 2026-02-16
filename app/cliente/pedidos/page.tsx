@@ -1,17 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ShoppingCart,
   ArrowRight,
   Loader2,
-  MessageCircle,
-  LogOut,
   User,
 } from 'lucide-react'
-import { signOut } from '@/lib/auth-client'
+import NameModal from '@/components/NameModal'
+import { getUserName, setUserName, clearUserName } from '@/lib/userName'
 
 interface Order {
   id: string
@@ -29,12 +27,6 @@ interface Order {
   unreadCount: number
 }
 
-interface UserData {
-  id: string
-  email: string
-  name: string
-  avatarUrl: string | null
-}
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Aguardando', color: 'text-yellow-400' },
@@ -61,55 +53,72 @@ function formatDate(date: string): string {
 }
 
 export default function ClientePedidosPage() {
-  const router = useRouter()
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
-  const [user, setUser] = useState<UserData | null>(null)
-  const [loggingOut, setLoggingOut] = useState(false)
+  const [loadingData, setLoadingData] = useState(false)
+  const [showNameModal, setShowNameModal] = useState(false)
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [userResponse, ordersResponse] = await Promise.all([
-          fetch('/api/auth/me'),
-          fetch('/api/cliente/pedidos'),
-        ])
-
-        if (userResponse.status === 401 || ordersResponse.status === 401) {
-          router.push('/auth/login?redirect=/cliente/pedidos')
-          return
-        }
-
-        const userData = await userResponse.json()
-        const ordersData = await ordersResponse.json()
-
-        setUser(userData)
-        setOrders(Array.isArray(ordersData) ? ordersData : [])
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error)
-        router.push('/auth/login?redirect=/cliente/pedidos')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [router])
-
-  async function handleLogout() {
-    setLoggingOut(true)
+  async function loadData(customerName: string) {
+    setLoadingData(true)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      await signOut()
-      router.push('/')
+      const ordersResponse = await fetch(`/api/client/orders?customerName=${encodeURIComponent(customerName)}`)
+      const ordersData = await ordersResponse.json()
+      setOrders(Array.isArray(ordersData) ? ordersData : [])
     } catch (error) {
-      console.error('Erro ao fazer logout:', error)
+      console.error('Erro ao carregar dados:', error)
+      setOrders([])
     } finally {
-      setLoggingOut(false)
+      setLoadingData(false)
+      setLoading(false)
     }
   }
 
-  if (loading) {
+  useEffect(() => {
+    // Verificar se já tem nome salvo no localStorage
+    const savedName = getUserName()
+    
+    if (savedName && savedName.trim().length >= 2) {
+      // Se tiver nome salvo, usar ele
+      setName(savedName.trim())
+      loadData(savedName.trim())
+    } else {
+      // Se não tiver nome, mostrar modal
+      setShowNameModal(true)
+      setLoading(false)
+    }
+  }, [])
+
+  function handleNameSubmit(submittedName: string) {
+    const trimmedName = submittedName.trim()
+    setUserName(trimmedName)
+    setName(trimmedName)
+    setShowNameModal(false)
+    setLoading(true)
+    loadData(trimmedName)
+  }
+
+  function handleChangeName() {
+    if (confirm('Deseja realmente trocar de nome? Isso limpará seus dados locais e você precisará informar o nome novamente.')) {
+      clearUserName()
+      setName('')
+      setOrders([])
+      setShowNameModal(true)
+    }
+  }
+
+  // Mostrar modal se necessário
+  if (showNameModal) {
+    return (
+      <NameModal
+        isOpen={showNameModal}
+        onNameSubmit={handleNameSubmit}
+        currentName={name}
+      />
+    )
+  }
+
+  if (loading || !name) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -118,10 +127,6 @@ export default function ClientePedidosPage() {
         </div>
       </div>
     )
-  }
-
-  if (!user) {
-    return null
   }
 
   return (
@@ -134,64 +139,56 @@ export default function ClientePedidosPage() {
                 Meus <span className="text-gradient">Pedidos</span>
               </h1>
               <p className="text-text-secondary mt-2">
-                Olá, {user.name}! Acompanhe seus pedidos
+                {name ? `Olá, ${name}! Acompanhe seus pedidos` : 'Informe seu nome para ver seus pedidos'}
               </p>
             </div>
-            <div className="flex gap-3 items-center">
-              <div className="flex items-center gap-2 text-text-secondary">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <User className="w-4 h-4 text-primary" />
-                  </div>
-                )}
-                <span className="text-sm">{user.name}</span>
-              </div>
-              <Link href="/cliente" className="btn-secondary">
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Negociações
-              </Link>
+            {name && (
               <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="btn-secondary"
+                onClick={handleChangeName}
+                className="btn-secondary flex items-center gap-2"
               >
-                {loggingOut ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <LogOut className="w-4 h-4 mr-2" />
-                )}
-                Sair
+                <User className="w-4 h-4" />
+                Trocar Nome
               </button>
-            </div>
+            )}
           </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
-              <ShoppingCart className="w-6 h-6 text-accent" />
-              Pedidos ({orders.length})
-            </h2>
-            <Link href="/cars" className="text-primary hover:text-primary/80 text-sm">
-              Ver veículos
-            </Link>
+        {loadingData ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+            <p className="text-text-secondary mt-4">Carregando seus pedidos...</p>
           </div>
-
-          {orders.length === 0 ? (
-            <div className="card-static p-8 text-center">
-              <ShoppingCart className="w-12 h-12 text-text-muted mx-auto mb-4" />
-              <p className="text-text-secondary mb-4">Você ainda não tem pedidos</p>
-              <Link href="/cars" className="btn-primary inline-block">
-                Ver Veículos
-              </Link>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <ShoppingCart className="w-6 h-6 text-accent" />
+                Pedidos ({orders.length})
+              </h2>
+              {orders.length > 0 && (
+                <Link href="/cars" className="text-primary hover:text-primary/80 text-sm">
+                  Ver veículos
+                </Link>
+              )}
             </div>
-          ) : (
+
+            {orders.length === 0 ? (
+              <div className="card-static p-12 text-center">
+                <ShoppingCart className="w-16 h-16 text-text-muted mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {name ? 'Você ainda não tem pedidos' : 'Nenhum pedido encontrado'}
+                </h3>
+                <p className="text-text-secondary mb-6">
+                  {name 
+                    ? 'Quando você fizer um pedido, ele aparecerá aqui para acompanhamento.'
+                    : 'Informe seu nome para ver seus pedidos existentes ou faça uma compra para criar um novo pedido.'}
+                </p>
+                <Link href="/cars" className="btn-primary inline-block">
+                  Ver Veículos
+                </Link>
+              </div>
+            ) : (
             <div className="space-y-4">
               {orders.map((order) => {
                 const status = statusLabels[order.status] || { label: order.status, color: 'text-gray-400' }
@@ -250,8 +247,9 @@ export default function ClientePedidosPage() {
                 )
               })}
             </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
