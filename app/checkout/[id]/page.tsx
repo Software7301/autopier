@@ -6,9 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  CreditCard,
   Wallet,
-  Banknote,
   CheckCircle,
   Car,
   AlertCircle,
@@ -32,13 +30,12 @@ const colorOptions = [
   { name: 'Vermelho', hex: '#dc2626', border: '#b91c1c' },
 ]
 
-const paymentMethods = [
-  { value: 'PIX', label: 'Pix', icon: Wallet, description: 'Pagamento instantâneo' },
-  { value: 'DINHEIRO', label: 'Dinheiro', icon: Banknote, description: 'Pagamento em espécie' },
-  { value: 'CARTAO_CREDITO', label: 'Cartão de Crédito', icon: CreditCard, description: 'Em até 12x' },
-]
-
-const installmentOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+const paymentMethod = {
+  value: 'PIX',
+  label: 'Pix',
+  icon: Wallet,
+  description: 'Pagamento instantâneo'
+}
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -66,7 +63,6 @@ export default function CheckoutPage() {
     customerRg: '',
     customerPhone: '',
     paymentMethod: 'PIX',
-    installments: 1,
   })
 
   const [errors, setErrors] = useState({
@@ -128,11 +124,6 @@ export default function CheckoutPage() {
       return
     }
 
-    if (name === 'installments') {
-      setFormData((prev) => ({ ...prev, [name]: parseInt(value) }))
-      return
-    }
-
     setFormData((prev) => ({ ...prev, [name]: value }))
 
     if (name === 'customerName' && errors.customerName) {
@@ -142,11 +133,6 @@ export default function CheckoutPage() {
 
   function handleColorSelect(colorName: string) {
     setSelectedColor(colorName)
-  }
-
-  function getInstallmentValue(): number {
-    if (!car) return 0
-    return car.price / formData.installments
   }
 
   function getSelectedColorData() {
@@ -194,7 +180,7 @@ export default function CheckoutPage() {
           customerRg: formData.customerRg,
           customerPhone: formData.customerPhone,
           paymentMethod: formData.paymentMethod,
-          installments: formData.paymentMethod === 'CARTAO_CREDITO' ? formData.installments : 1,
+          installments: 1,
           totalPrice: car.price,
           selectedColor: selectedColor,
         }),
@@ -286,7 +272,6 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {}
         <div className="mb-8">
           <Link
             href="/cars"
@@ -301,12 +286,10 @@ export default function CheckoutPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {}
           <div className="lg:col-span-7 space-y-6">
             <form onSubmit={handleSubmit} className="card-static p-6 space-y-6">
               <h2 className="text-xl font-semibold text-white">Dados do Comprador</h2>
 
-              {}
               <div>
                 <label htmlFor="customerName" className="block text-sm font-medium text-text-secondary mb-2">
                   Nome Completo *
@@ -328,7 +311,6 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {}
               <div>
                 <label htmlFor="customerRg" className="block text-sm font-medium text-text-secondary mb-2">
                   RG (apenas números) *
@@ -354,7 +336,6 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {}
               <div>
                 <label htmlFor="customerPhone" className="block text-sm font-medium text-text-secondary mb-2">
                   Telefone (apenas números) *
@@ -379,60 +360,17 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
-              {}
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-4">
                   Forma de Pagamento *
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {paymentMethods.map((method) => (
-                    <button
-                      key={method.value}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({
-                        ...prev,
-                        paymentMethod: method.value,
-                        installments: method.value === 'CARTAO_CREDITO' ? prev.installments : 1
-                      }))}
-                      className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-                        formData.paymentMethod === method.value
-                          ? 'border-primary bg-primary/10'
-                          : 'border-surface-border hover:border-primary/50 bg-surface'
-                      }`}
-                    >
-                      <method.icon className={`w-6 h-6 mb-2 ${
-                        formData.paymentMethod === method.value ? 'text-primary' : 'text-text-muted'
-                      }`} />
-                      <p className="font-medium text-white">{method.label}</p>
-                      <p className="text-xs text-text-muted">{method.description}</p>
-                    </button>
-                  ))}
+                <div className="p-4 rounded-xl border-2 border-primary bg-primary/10">
+                  <paymentMethod.icon className="w-6 h-6 mb-2 text-primary" />
+                  <p className="font-medium text-white">{paymentMethod.label}</p>
+                  <p className="text-xs text-text-muted">{paymentMethod.description}</p>
                 </div>
               </div>
 
-              {}
-              {formData.paymentMethod === 'CARTAO_CREDITO' && (
-                <div>
-                  <label htmlFor="installments" className="block text-sm font-medium text-text-secondary mb-2">
-                    Parcelamento *
-                  </label>
-                  <select
-                    id="installments"
-                    name="installments"
-                    value={formData.installments}
-                    onChange={handleInputChange}
-                    className="input-field"
-                  >
-                    {installmentOptions.map((num) => (
-                      <option key={num} value={num}>
-                        {num}x de {formatPrice(car.price / num)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {}
               <button
                 type="submit"
                 disabled={submitting}
@@ -453,9 +391,7 @@ export default function CheckoutPage() {
             </form>
           </div>
 
-          {}
           <div className="lg:col-span-5 space-y-6">
-            {}
             <div className="card-static overflow-hidden">
               <div className="relative h-64">
                 <Image
@@ -467,15 +403,12 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {}
             <div className="card-static p-5">
-              {}
               <div className="flex items-center gap-2 mb-5">
                 <Paintbrush className="w-5 h-5 text-primary" />
                 <span className="text-base font-medium text-white">Escolha a cor do veículo</span>
               </div>
 
-              {}
               <div className="grid grid-cols-3 gap-4">
                 {colorOptions.map((color) => (
                   <button
@@ -507,7 +440,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {}
             <div className="card-static p-6 space-y-5">
               <h3 className="text-xl font-semibold text-white">Resumo do Pedido</h3>
 
@@ -531,19 +463,10 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-text-secondary text-base">
                   <span>Pagamento</span>
-                  <span className="text-white">
-                    {paymentMethods.find((m) => m.value === formData.paymentMethod)?.label}
-                  </span>
+                  <span className="text-white">{paymentMethod.label}</span>
                 </div>
-                {formData.paymentMethod === 'CARTAO_CREDITO' && (
-                  <div className="flex justify-between text-text-secondary text-base">
-                    <span>Parcelas</span>
-                    <span className="text-white">{formData.installments}x</span>
-                  </div>
-                )}
               </div>
 
-              {}
               <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-medium text-white">Total</span>
@@ -551,11 +474,6 @@ export default function CheckoutPage() {
                     {formatPrice(car.price)}
                   </span>
                 </div>
-                {formData.paymentMethod === 'CARTAO_CREDITO' && formData.installments > 1 && (
-                  <div className="text-right text-text-secondary text-base">
-                    {formData.installments}x de {formatPrice(getInstallmentValue())}
-                  </div>
-                )}
               </div>
             </div>
           </div>
