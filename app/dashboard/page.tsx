@@ -204,25 +204,51 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+    let requestCount = 0
+    const MAX_REQUESTS = 3
+
     async function fetchData() {
+      if (requestCount >= MAX_REQUESTS) {
+        console.warn('Limite de requisições atingido')
+        return
+      }
+
       try {
+        requestCount++
+        // Combinar requisições em paralelo, mas limitado
+        const [statsRes, ordersRes] = await Promise.all([
+          fetch('/api/dashboard/stats', { cache: 'no-store' }),
+          fetch('/api/dashboard/orders?limit=5', { cache: 'no-store' })
+        ])
 
-        const statsRes = await fetch('/api/dashboard/stats')
-        const statsData = await statsRes.json()
-        setStats(statsData.stats)
-        setCharts(statsData.charts)
+        if (!isMounted) return
 
-        const ordersRes = await fetch('/api/dashboard/orders')
-        const ordersData = await ordersRes.json()
-        const safeOrders = Array.isArray(ordersData) ? ordersData : []
-        setRecentOrders(safeOrders.slice(0, 5))
+        if (statsRes.ok) {
+          const statsData = await statsRes.json()
+          setStats(statsData.stats)
+          setCharts(statsData.charts)
+        }
+
+        if (ordersRes.ok) {
+          const ordersData = await ordersRes.json()
+          const safeOrders = Array.isArray(ordersData) ? ordersData : []
+          setRecentOrders(safeOrders.slice(0, 5))
+        }
       } catch (error) {
         console.error('Erro ao buscar dados:', error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
+    
     fetchData()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   if (loading) {
